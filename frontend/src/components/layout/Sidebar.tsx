@@ -40,7 +40,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </Link>
       })}
     </nav>
-    <div className="sidebar-art" aria-hidden="true"><img src="/assets/cell-etching.png" alt="" /><span>Patterns into perspective.</span></div>
+    <div className="sidebar-art" aria-hidden="true"><img src="/assets/cell-etching.webp" alt="" /><span>Patterns into perspective.</span></div>
     <div className="sidebar-bottom"><HelpDialog /><MotionSwitch /><div className="local-status"><span className="status-dot" /><span>Local workspace</span><span className="version-label">v0.1</span></div></div>
   </>
 }

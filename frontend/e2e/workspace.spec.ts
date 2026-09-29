@@ -73,3 +73,18 @@ test('desktop and mobile layouts stay within viewport and mobile navigation work
   await expect(page.getByRole('heading', { name: 'Where evidence takes shape.' })).toBeVisible()
   await expect(page.getByRole('dialog', { name: 'Navigation', exact: true })).not.toBeVisible()
 })
+
+test('on short laptop windows the sidebar artwork scales to fit instead of being cut off', async ({ page }) => {
+  for (const [width, height] of [[1536, 730], [1366, 650], [1280, 800]]) {
+    await page.setViewportSize({ width, height })
+    await openWorkspace(page)
+    const art = await page.locator('.desktop-sidebar .sidebar-art').evaluate(container => {
+      const box = container.getBoundingClientRect()
+      const image = container.querySelector('img')!.getBoundingClientRect()
+      return { inside: image.top >= box.top - 0.5 && image.bottom <= box.bottom + 0.5, height: image.height }
+    })
+    expect(art.inside, `${width}×${height}`).toBe(true)
+    expect(art.height).toBeGreaterThan(100)
+    await expect(page.locator('.desktop-sidebar').getByRole('button', { name: 'About this workspace' })).toBeInViewport()
+  }
+})
