@@ -1,0 +1,19 @@
+# OS and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+
+# Python (frontend/scripts)
+__pycache__/
+*.pyc
+
+# Environment and local tool settings
+.env
+.env.*
+.claude/settings.local.json
+
+# Office lock files
+~$*

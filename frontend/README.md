@@ -28,7 +28,7 @@ npm.cmd test
 - JPEG/PNG type and decode validation; limits of 12 images, 20 MB per file, and 40 megapixels per decoded image. Duplicate detection uses filename, size, and last-modified metadata; it is not content hashing.
 - Valid images survive a mixed invalid selection and navigation between routes.
 - Guide dialog, accessible mobile drawer, motion preferences, keyboard focus, and reduced-motion support.
-- Honest Phase 4 states for History and Research.
+- Honest later-phase states for History and Research.
 
 **No model, prediction, backend request, authentication, or image persistence is implemented.** The analysis action is disabled and explained. Draft files live only in memory and disappear on reload. Only the motion preference is stored in localStorage.
 
@@ -70,4 +70,4 @@ Use the on-screen Reduce motion switch to pause spatial and ambient effects. A s
 
 ## Later phases
 
-See `../Docs/Frontend_Build_Phases.md`. Phase 2 adds the sample-review screen and expanded image viewer; Phase 3 adds service contracts and explicitly simulated analysis; Phase 4 adds history and research; Phase 5 completes integration readiness and broader validation.
+See `../Docs/UI_Build_Plan.md` for the phase plan and current status.

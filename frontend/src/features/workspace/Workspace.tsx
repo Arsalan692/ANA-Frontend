@@ -1,11 +1,45 @@
 import { useEffect, useRef, useState } from 'react'
 import type { DragEvent } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowDownToLine, ArrowRight, Check, ChevronRight, CircleAlert, FileImage, ImagePlus, Layers2, LoaderCircle, LockKeyhole, Plus, ScanLine, Trash2, X } from 'lucide-react'
+import { ArrowDownToLine, ArrowRight, ArrowUpRight, Check, ChevronRight, CircleAlert, FileImage, ImagePlus, Layers2, LoaderCircle, LockKeyhole, Plus, ScanLine, Trash2, X } from 'lucide-react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { useDraft, useMotionPreference } from '../../app/contexts'
 import { formatBytes } from './filePolicy'
+import { Link } from 'react-router-dom'
 import { NucleusMark } from '../../components/ui/Brand'
+import { Badge } from '../../components/ui/Badge'
+import { ResultStatus } from '../../components/ui/ResultStatus'
+import { PageHeader } from '../../components/layout/PageHeader'
+import { useSamples } from '../samples/useSamples'
+import type { Sample } from '../../types/sample'
+import { AnalysisDialog } from './AnalysisDialog'
+import { useSimulatedAnalysis } from './useSimulatedAnalysis'
+
+function SampleLinks({ samples }: { samples: Sample[] }) {
+  return <ul>{samples.map(sample => <li key={sample.id}><Link to={`/samples/${sample.id}`} className="demo-sample-link">
+    <strong>{sample.reference}</strong>
+    <span className="demo-sample-scenario">{sample.demoScenario ?? `${sample.images.length} ${sample.images.length === 1 ? 'field' : 'fields'} · simulated`}</span>
+    {sample.result && <ResultStatus call={sample.result.call} />}
+    <ArrowUpRight size={15} aria-hidden="true" />
+  </Link></li>)}</ul>
+}
+
+function SampleShortcuts() {
+  const samples = useSamples()
+  const session = samples.filter(sample => !sample.demo)
+  return <>
+    {session.length > 0 && <section className="demo-samples" aria-labelledby="session-samples-heading">
+      <div className="eyebrow" id="session-samples-heading">ANALYSED THIS SESSION</div>
+      <p className="demo-samples-note">Simulated results. These samples disappear when the page is refreshed.</p>
+      <SampleLinks samples={session} />
+    </section>}
+    <section className="demo-samples" aria-labelledby="demo-samples-heading">
+      <div className="eyebrow" id="demo-samples-heading">OR OPEN A DEMO SAMPLE</div>
+      <p className="demo-samples-note">Synthetic images with simulated screening results, for demonstration.</p>
+      <SampleLinks samples={samples.filter(sample => sample.demo)} />
+    </section>
+  </>
+}
 
 function ClearDraft() {
   const { clearDraft, images } = useDraft()
@@ -24,6 +58,9 @@ export function Workspace() {
   const dragDepth = useRef(0)
   const [dragging, setDragging] = useState(false)
   const hasImages = images.length > 0
+  const analysis = useSimulatedAnalysis()
+  const [simulateFailure, setSimulateFailure] = useState(false)
+  const analyse = () => void analysis.start({ simulateFailure })
   useEffect(() => {
     const node = surface.current
     if (!node) return
@@ -36,6 +73,7 @@ export function Workspace() {
     void addFiles(Array.from(event.dataTransfer.files))
   }
   return <>
+    <PageHeader crumbs={[{ label: 'Workspace' }]} badge={<Badge dot>Frontend preview</Badge>} />
     <section className="page-intro"><div><div className="eyebrow"><span className="tiny-rule" />THE ANALYSIS WORKSPACE</div><h1>Prepare a sample<span className="accent-period">.</span></h1><p>A thoughtful first step towards a clearer interpretation.</p></div><div className="intro-index"><span>01</span><small>PREPARATION</small></div></section>
     <div className="workspace-layout">
       <section className="preparation-panel" aria-label="Sample preparation">
@@ -62,15 +100,22 @@ export function Workspace() {
         <div className="sr-only" role="status" aria-live="polite">{busy ? 'Checking selected images.' : `${images.length} images selected.`}</div>
         {errors.length > 0 && <div className="file-errors" role="alert"><div><CircleAlert size={17} /><strong>Some files need attention</strong><button className="icon-button" onClick={dismissErrors} aria-label="Dismiss file errors"><X size={15} /></button></div><ul>{errors.map((error, index) => <li key={`${index}-${error}`}>{error}</li>)}</ul></div>}
         <div className="sample-guidance"><div className="eyebrow">A WELL-PREPARED SAMPLE</div><div className="guidance-items"><div><Layers2 size={18} strokeWidth={1.3} /><div><h3>Keep the fields together</h3><p>Choose images belonging to the same patient sample.</p></div></div><div><ScanLine size={18} strokeWidth={1.3} /><div><h3>Preserve the original view</h3><p>Use the original microscopy exports, without added filters.</p></div></div></div></div>
+        <SampleShortcuts />
       </section>
       <aside className="workflow-panel" aria-label="Sample workflow">
         <div className="eyebrow">FROM FIELD TO FINDING</div><h2>A clear path<br /><em>through the sample.</em></h2><p className="workflow-lead">Each step brings the images closer to one considered result.</p>
-        <ol className="workflow-steps"><li className="current"><span className="step-marker">{hasImages ? <Check size={15} /> : '01'}</span><div><h3>Prepare the images <span>NOW</span></h3><p>Select the fields from one sample.</p></div></li><li><span className="step-marker">02</span><div><h3>Analyse the patterns</h3><p>Image-level classification, brought together at sample level.</p></div></li><li><span className="step-marker">03</span><div><h3>Review the interpretation</h3><p>Inspect the evidence behind the predicted pattern.</p></div></li></ol>
+        <ol className="workflow-steps"><li className="current"><span className="step-marker">{hasImages ? <Check size={15} /> : '01'}</span><div><h3>Prepare the images <span>NOW</span></h3><p>Select the fields from one sample.</p></div></li><li><span className="step-marker">02</span><div><h3>Screen each field</h3><p>Each field is screened as positive or negative, then brought together at sample level.</p></div></li><li><span className="step-marker">03</span><div><h3>Review the result</h3><p>Inspect the fields behind the screening result.</p></div></li></ol>
         <div className="sample-summary"><div><span>Selected fields</span><strong>{String(images.length).padStart(2, '0')}</strong></div><div><span>Sample status</span><span className="sample-state">{busy ? 'Checking files' : hasImages ? 'Draft prepared' : 'Awaiting images'}</span></div></div>
-        <button className="button button-analysis" disabled aria-describedby="analysis-availability"><span>Analyse sample</span><ArrowRight size={17} /></button><p id="analysis-availability" className="availability-note">Analysis will be available in Phase 3.<br />This preview prepares images only.</p>
+        <button className="button button-analysis" disabled={!hasImages || busy || analysis.state.status === 'running'} onClick={analyse} aria-describedby="analysis-availability"><span>Analyse sample</span><ArrowRight size={17} /></button><p id="analysis-availability" className="availability-note">{hasImages ? <>Results are simulated from image brightness.<br />They are not a model prediction.</> : 'Add at least one image to analyse.'}</p>
+        {hasImages && <label className="demo-toggle"><input type="checkbox" checked={simulateFailure} onChange={event => setSimulateFailure(event.target.checked)} />Simulate a failed analysis (demo)</label>}
+        <AnalysisDialog state={analysis.state} onCancel={analysis.cancel} onRetry={() => { setSimulateFailure(false); void analysis.start() }} />
         <div className="principle"><NucleusMark /><p>One sample.<br /><em>A more complete perspective.</em></p></div>
       </aside>
     </div>
+    {hasImages && <section className="mobile-analyse" aria-label="Analyse this sample">
+      <span><strong>{String(images.length).padStart(2, '0')}</strong> {images.length === 1 ? 'field' : 'fields'} ready<small>Simulated analysis</small></span>
+      <button className="button button-primary" disabled={busy || analysis.state.status === 'running'} onClick={analyse}>Analyse sample<ArrowRight size={16} /></button>
+    </section>}
     <footer className="page-footer"><span><FileImage size={13} /> HEp-2 indirect immunofluorescence</span><span>Decision support, not a diagnosis.<ChevronRight size={12} /></span></footer>
   </>
 }

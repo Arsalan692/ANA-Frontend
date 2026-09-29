@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import { MotionConfig } from 'motion/react'
-import { DraftContext, MotionContext } from './contexts'
+import { DraftContext, MotionContext, SessionContext } from './contexts'
+import type { Sample } from '../types/sample'
 import type { DraftImage } from '../features/workspace/types'
 import { fileKey, validateFile, validateDimensions } from '../features/workspace/filePolicy'
 
@@ -99,7 +100,34 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     locked.current = false
     setBusy(false)
   }
-  return <DraftContext.Provider value={{ images, errors, busy, addFiles, removeImage, clearDraft, dismissErrors: () => setErrors([]) }}>
+  const takeDraft = () => {
+    const taken = imagesRef.current
+    generation.current += 1
+    imagesRef.current = []
+    setImages([])
+    setErrors([])
+    locked.current = false
+    setBusy(false)
+    return taken
+  }
+  return <DraftContext.Provider value={{ images, errors, busy, addFiles, removeImage, clearDraft, takeDraft, dismissErrors: () => setErrors([]) }}>
     {children}
   </DraftContext.Provider>
+}
+
+export function SessionProvider({ children }: { children: ReactNode }) {
+  const [sessionSamples, setSessionSamples] = useState<Sample[]>([])
+  const [reviewedAt, setReviewedAt] = useState<Record<string, string>>({})
+  const samplesRef = useRef<Sample[]>([])
+  useEffect(() => () => {
+    samplesRef.current.forEach(sample => sample.images.forEach(image => { if (image.src.startsWith('blob:')) URL.revokeObjectURL(image.src) }))
+  }, [])
+  const addSample = useCallback((sample: Sample) => {
+    samplesRef.current = [sample, ...samplesRef.current]
+    setSessionSamples(samplesRef.current)
+  }, [])
+  const completeReview = useCallback((sampleId: string) => {
+    setReviewedAt(previous => previous[sampleId] ? previous : { ...previous, [sampleId]: new Date().toISOString() })
+  }, [])
+  return <SessionContext.Provider value={{ sessionSamples, addSample, reviewedAt, completeReview }}>{children}</SessionContext.Provider>
 }
