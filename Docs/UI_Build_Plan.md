@@ -1,6 +1,6 @@
 # ANA / LAB — Frontend UI build plan
 
-Scope: **frontend UI only**. There is no backend or API work in this plan.
+Scope: the frontend UI, plus (from M1) a small local screening service in `backend/` that runs the trained positive/negative model. There is no other backend work in this plan.
 
 **Current priority: ANA positive vs negative.** On **Friday 2 October 2026** the team presents a model that classifies a sample as positive or negative. The UI therefore first delivers a complete positive/negative workflow. Pattern classification (AC codes) and the other screens come after Friday.
 
@@ -17,6 +17,7 @@ We build one phase at a time. A phase is done only when `npm.cmd run build`, `li
 | 2 | Sample review screen (pos/neg) | Friday | Done (29 Sep 2026) |
 | 3 | Simulated analysis flow and simple image viewer | Friday | Done (29 Sep 2026) |
 | 4 | Friday demo readiness | Friday | Done (29 Sep 2026) |
+| M1 | Connect the trained ResNet18 pos/neg model | Friday | Done (30 Sep 2026) |
 | 5 | Pattern classification UI | Later | Not started |
 | 6 | Full image viewer | Later | Not started |
 | 7 | Sample history | Later | Not started |
@@ -26,7 +27,7 @@ We build one phase at a time. A phase is done only when `npm.cmd run build`, `li
 ## UI rules (every phase)
 
 - The result is a screening output, **not a diagnosis**. "Decision support, not a diagnosis." appears on every result screen.
-- Result values are demo data until a model is connected, and are visibly labelled as such ("Demo data" badge, "Simulated" on results). No invented model versions or metrics.
+- Demo samples are labelled "Demo data". Uploaded samples are screened by the research model and labelled "Research model" and "Not clinically validated". Model facts shown in the UI come from the checkpoint itself. No invented model versions or metrics.
 - Neither positive nor negative gets "good/bad" colours: no green tick for negative, no red alarm for positive. Status is always written in words, never shown by colour alone.
 - Confidence is shown only when the data has it, and never called "certainty". The sample-level result and confidence come from the data; the UI does not calculate them.
 - Keep the result data behind small hooks (`useSample(id)`), so a real model's output can replace the demo data without changing screens.
@@ -91,7 +92,7 @@ This phase covers the shell, routing, tokens and fonts, the motion system, the h
 
 **Done when:** upload → analyse → review → complete works end to end.
 
-_As built:_ uploaded fields are screened by a labelled brightness simulation (`src/demo/simulateAnalysis.ts`, not a model; no confidence reported). The failure is triggered by a "Simulate a failed analysis (demo)" checkbox. On success the draft images move into a session sample (S-0301 onward), so **New sample** never discards work and needs no confirmation. Complete review was built in Phase 2.
+_As built (superseded by M1, which connects the real model):_ uploaded fields were screened by a labelled brightness simulation (`src/demo/simulateAnalysis.ts`, not a model; no confidence reported). The failure is triggered by a "Simulate a failed analysis (demo)" checkbox. On success the draft images move into a session sample (S-0301 onward), so **New sample** never discards work and needs no confirmation. Complete review was built in Phase 2.
 
 ## Phase 4 — Friday demo readiness
 
@@ -104,6 +105,16 @@ _As built:_ uploaded fields are screened by a labelled brightness simulation (`s
 **Done when:** the Friday demo runs start to finish without issues.
 
 _As built:_ demo script in `Docs/Friday_Demo_Script.md`; presentation screenshots in `UI Concepts/Screen-{Desktop,Mobile}-*.png` (regenerate with `$env:CAPTURE='1'; npx.cmd playwright test screens`); full-journey tests fail on any console error; phones get a pinned "Analyse sample" bar.
+
+## M1 — Connect the trained model
+
+- Local FastAPI service (`backend/`) loads `Results/aida_binary_resnet18_512_best.pt` (ResNet18, ImageNet weights, frozen backbone, 2-class head, epoch 20) and repeats the training preprocessing exactly: RGB, aspect-preserving Lanczos pad to 512 × 512 with black, ImageNet normalisation, no brightness equalisation.
+- `POST /api/screen` returns a call and probability per field, plus the sample result from the provisional rule: majority of fields, a tie reported as positive, disagreement flagged for review. There is no sample-level confidence.
+- The workspace sends the draft to the service (Vite proxies `/api`); the brightness simulation and the "simulate a failure" checkbox are removed. Real failures (service not running, rejected files) keep the images and offer Retry. BMP uploads are accepted.
+
+**Done when:** the service reproduces the notebook on the reserved test split and the full journey runs through the real model.
+
+_As built:_ `backend/scripts/evaluate_split.py` gives 298/298 pixel-identical preprocessed images and TN 79 · FP 3 · FN 6 · TP 210, matching `Model Training/analysis/aida/test_report`. With the majority rule, 143 of 146 test samples are correct at sample level. The model calls the synthetic demo artwork positive (out of distribution), so the demo uses three held-out test samples copied to `demo-images/`. Browser tests stub the service; `e2e/model.spec.ts` runs the real model.
 
 ---
 
@@ -126,5 +137,5 @@ A full check against D, motion tuning, accessibility, responsive checks and brow
 
 ## Open inputs
 
-- How the Friday model's output will be shown (per-image result and confidence, and the sample-level rule): needed to replace the demo data
+- The final image-to-sample rule, to be fixed with the clinical collaborator (the majority rule in `backend/app/aggregation.py` is provisional)
 - Supervisor name for the project panel: the proposal says Ubaid Chawla, the handoff says Dr. Muhammad Shahzad

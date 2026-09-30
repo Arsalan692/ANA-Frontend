@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import path from 'node:path'
+import { mockScreening } from './screeningMock'
 
 const source = (name: string) => path.resolve(`assets-source/${name}.png`)
 
@@ -14,6 +15,7 @@ function watchConsole(page: Page) {
 
 test('Friday demo journey: demo samples, upload, analyse, inspect, review — without console errors', async ({ page }) => {
   const problems = watchConsole(page)
+  await mockScreening(page)
   await page.goto('/workspace')
 
   // Walk each demo sample from the workspace shortcuts.
@@ -52,6 +54,7 @@ test('Friday demo journey: demo samples, upload, analyse, inspect, review — wi
 test('on a phone, the pinned bar analyses the sample without scrolling to the panel', async ({ page }) => {
   const problems = watchConsole(page)
   await page.setViewportSize({ width: 390, height: 844 })
+  await mockScreening(page)
   await page.goto('/workspace')
   await expect(page.getByRole('region', { name: 'Analyse this sample' })).toHaveCount(0)
   await page.getByTestId('file-input').setInputFiles([source('field-negative-01')])

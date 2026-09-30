@@ -30,7 +30,7 @@ export function SampleReview() {
   const count = sample.images.length
   return <div className="review-layout">
     <div className="review-main">
-      <PageHeader crumbs={[{ label: 'Workspace', to: '/workspace' }, { label: sample.reference }]} badge={sample.demo ? <Badge dot>Demo data</Badge> : sample.analysis?.simulated ? <Badge dot>Simulated analysis</Badge> : undefined} />
+      <PageHeader crumbs={[{ label: 'Workspace', to: '/workspace' }, { label: sample.reference }]} badge={sample.demo ? <Badge dot>Demo data</Badge> : sample.analysis?.simulated ? <Badge dot>Simulated analysis</Badge> : sample.analysis ? <Badge dot>Research model</Badge> : undefined} />
       <section className="review-intro">
         <h1>Sample review</h1>
         <p>{describeFieldCount(count)}. One sample-level screening result.</p>

@@ -35,6 +35,8 @@ export type AnalysisInfo = {
   /** Display label for the classifier. Demo data never names a real model version. */
   modelLabel: string
   simulated: boolean
+  /** Extra facts reported by the classifier (checkpoint, training data, sample rule), shown as-is. */
+  details?: { label: string; value: string }[]
 }
 
 export type Sample = {

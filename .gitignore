@@ -17,3 +17,11 @@ __pycache__/
 
 # Office lock files
 ~$*
+
+# Backend: virtual environment, model checkpoints, test caches
+.venv/
+*.pt
+.pytest_cache/
+
+# Local copies of AIDA test images for the demo (not redistributed)
+demo-images/

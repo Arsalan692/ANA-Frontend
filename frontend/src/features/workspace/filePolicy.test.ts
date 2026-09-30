@@ -4,12 +4,14 @@ import { fileKey, LIMITS, validateDimensions, validateFile } from './filePolicy'
 const image = { name: 'field.png', type: 'image/png', size: 1024, lastModified: 1 }
 
 describe('sample image policy', () => {
-  it('accepts PNG and JPEG within the configured limits', () => {
+  it('accepts PNG, JPEG and BMP within the configured limits', () => {
     expect(validateFile(image, [])).toBeNull()
+    expect(validateFile({ ...image, name: 'field.bmp', type: 'image/bmp' }, [])).toBeNull()
     expect(validateFile({ ...image, name: 'field.jpg', type: 'image/jpeg', size: LIMITS.bytes }, [])).toBeNull()
   })
   it('rejects unsupported, empty, oversized, and repeated files', () => {
-    expect(validateFile({ ...image, type: 'image/svg+xml' }, [])).toContain('JPEG or PNG')
+    expect(validateFile({ ...image, type: 'image/svg+xml' }, [])).toContain('JPEG, PNG or BMP')
+    expect(validateFile({ ...image, name: 'field.tif', type: 'image/tiff' }, [])).toContain('JPEG, PNG or BMP')
     expect(validateFile({ ...image, size: 0 }, [])).toContain('empty')
     expect(validateFile({ ...image, size: LIMITS.bytes + 1 }, [])).toContain('20 MB')
     expect(validateFile(image, [fileKey(image)])).toContain('already')

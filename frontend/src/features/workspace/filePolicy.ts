@@ -3,7 +3,8 @@ type FileMetadata = Pick<File, 'name' | 'type' | 'size' | 'lastModified'>
 export const fileKey = (file: FileMetadata) => `${file.name}:${file.size}:${file.lastModified}`
 
 export function validateFile(file: FileMetadata, existingKeys: string[]): string | null {
-  if (!['image/jpeg', 'image/png'].includes(file.type)) return 'use a JPEG or PNG image.'
+  // BMP is common in AIDA-style exports and browsers can preview it. TIFF cannot be previewed in the browser yet.
+  if (!['image/jpeg', 'image/png', 'image/bmp'].includes(file.type)) return 'use a JPEG, PNG or BMP image.'
   if (file.size === 0) return 'this file is empty.'
   if (file.size > LIMITS.bytes) return 'the file exceeds the 20 MB limit.'
   if (existingKeys.includes(fileKey(file))) return 'this file is already in your sample.'

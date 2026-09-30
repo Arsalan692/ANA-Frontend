@@ -36,7 +36,7 @@ test('mixed selections retain valid images and explain corrupt, unsupported, and
     { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('text') },
   ])
   await expect(page.getByRole('alert')).toContainText('could not be opened')
-  await expect(page.getByRole('alert')).toContainText('JPEG or PNG')
+  await expect(page.getByRole('alert')).toContainText('JPEG, PNG or BMP')
   await page.getByTestId('file-input').setInputFiles(artwork)
   await expect(page.getByAltText('Selected field 1: cell-etching.png')).toBeVisible()
   await page.getByTestId('file-input').setInputFiles(artwork)

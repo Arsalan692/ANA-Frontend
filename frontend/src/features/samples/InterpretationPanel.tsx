@@ -36,11 +36,11 @@ function ScreeningSummary({ sample, result }: { sample: Sample; result: SampleRe
         <p>{REFERENCE_TEXT[result.call]}</p>
       </div>
     </div>
-    <div className="panel-section"><ConfidenceBar value={result.confidence} /></div>
+    <div className="panel-section"><ConfidenceBar value={result.confidence} missing={sample.analysis && !sample.analysis.simulated ? 'Not reported for the whole sample. The model scores each field; see the field results.' : undefined} /></div>
     <div className="panel-section">
       <FieldAgreement fields={fieldCalls} sampleCall={result.call} />
       {result.needsReview && <div className="review-flag"><CircleAlert size={16} aria-hidden="true" /><p><strong>Needs a closer look.</strong> {differing > 0 ? `${differing} of ${fieldCalls.length} fields differ from the sample-level result. ` : ''}Check each field before completing the review.</p></div>}
-      <p className="panel-note">Model output for clinician review.</p>
+      <p className="panel-note">{sample.analysis && !sample.analysis.simulated ? 'Research model output for clinician review. Not clinically validated.' : 'Model output for clinician review.'}</p>
     </div>
   </>
 }
@@ -57,8 +57,9 @@ export function InterpretationPanel({ sample }: { sample: Sample }) {
       <summary><span><strong>Analysis details</strong><small>{analysis ? `${analysis.modelLabel}${analysis.simulated ? ' · Simulated' : ''}` : 'Not analysed'}</small></span><ChevronDown size={16} aria-hidden="true" /></summary>
       <dl>
         {analysis && <><div><dt>Classifier</dt><dd>{analysis.modelLabel}</dd></div>
-        <div><dt>Mode</dt><dd>{!analysis.simulated ? 'Model output' : sample.demo ? 'Simulated (demo data)' : 'Simulated from image brightness, not a model'}</dd></div>
-        <div><dt>Analysed</dt><dd>{formatDateTime(analysis.analysedAt)}</dd></div></>}
+        <div><dt>Mode</dt><dd>{!analysis.simulated ? 'Model output' : sample.demo ? 'Simulated (demo data)' : 'Simulated, not a model'}</dd></div>
+        <div><dt>Analysed</dt><dd>{formatDateTime(analysis.analysedAt)}</dd></div>
+        {analysis.details?.map(detail => <div key={detail.label}><dt>{detail.label}</dt><dd>{detail.value}</dd></div>)}</>}
         <div><dt>Fields screened</dt><dd>{sample.images.length}</dd></div>
         <div><dt>Output</dt><dd>ANA positive or negative. Staining pattern classification comes in a later version.</dd></div>
       </dl>

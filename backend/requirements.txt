@@ -1,0 +1,11 @@
+# CPU build of PyTorch is enough for inference:
+#   pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.14.0
+torchvision==0.29.0
+fastapi==0.142.2
+uvicorn[standard]==0.54.0
+python-multipart==0.0.32
+pillow==12.3.0
+# Tests
+pytest==9.1.1
+httpx==0.28.1

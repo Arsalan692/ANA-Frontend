@@ -12,7 +12,9 @@ const html = renderToStaticMarkup
 describe('result building blocks', () => {
   it('formats confidence and field numbers', () => {
     expect(formatConfidence(0.942)).toBe('94.2%')
-    expect(formatConfidence(1)).toBe('100.0%')
+    expect(formatConfidence(0.9994)).toBe('99.9%')
+    expect(formatConfidence(0.9997)).toBe('>99.9%')
+    expect(formatConfidence(1)).toBe('>99.9%')
     expect(formatField(3)).toBe('Field 03')
   })
 

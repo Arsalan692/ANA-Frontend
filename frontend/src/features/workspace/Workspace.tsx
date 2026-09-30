@@ -13,12 +13,12 @@ import { PageHeader } from '../../components/layout/PageHeader'
 import { useSamples } from '../samples/useSamples'
 import type { Sample } from '../../types/sample'
 import { AnalysisDialog } from './AnalysisDialog'
-import { useSimulatedAnalysis } from './useSimulatedAnalysis'
+import { useAnalysis } from './useAnalysis'
 
 function SampleLinks({ samples }: { samples: Sample[] }) {
   return <ul>{samples.map(sample => <li key={sample.id}><Link to={`/samples/${sample.id}`} className="demo-sample-link">
     <strong>{sample.reference}</strong>
-    <span className="demo-sample-scenario">{sample.demoScenario ?? `${sample.images.length} ${sample.images.length === 1 ? 'field' : 'fields'} · simulated`}</span>
+    <span className="demo-sample-scenario">{sample.demoScenario ?? `${sample.images.length} ${sample.images.length === 1 ? 'field' : 'fields'} · model result`}</span>
     {sample.result && <ResultStatus call={sample.result.call} />}
     <ArrowUpRight size={15} aria-hidden="true" />
   </Link></li>)}</ul>
@@ -30,7 +30,7 @@ function SampleShortcuts() {
   return <>
     {session.length > 0 && <section className="demo-samples" aria-labelledby="session-samples-heading">
       <div className="eyebrow" id="session-samples-heading">ANALYSED THIS SESSION</div>
-      <p className="demo-samples-note">Simulated results. These samples disappear when the page is refreshed.</p>
+      <p className="demo-samples-note">Research model results. These samples disappear when the page is refreshed.</p>
       <SampleLinks samples={session} />
     </section>}
     <section className="demo-samples" aria-labelledby="demo-samples-heading">
@@ -58,9 +58,8 @@ export function Workspace() {
   const dragDepth = useRef(0)
   const [dragging, setDragging] = useState(false)
   const hasImages = images.length > 0
-  const analysis = useSimulatedAnalysis()
-  const [simulateFailure, setSimulateFailure] = useState(false)
-  const analyse = () => void analysis.start({ simulateFailure })
+  const analysis = useAnalysis()
+  const analyse = () => void analysis.start()
   useEffect(() => {
     const node = surface.current
     if (!node) return
@@ -73,16 +72,16 @@ export function Workspace() {
     void addFiles(Array.from(event.dataTransfer.files))
   }
   return <>
-    <PageHeader crumbs={[{ label: 'Workspace' }]} badge={<Badge dot>Frontend preview</Badge>} />
+    <PageHeader crumbs={[{ label: 'Workspace' }]} badge={<Badge dot>Research prototype</Badge>} />
     <section className="page-intro"><div><div className="eyebrow"><span className="tiny-rule" />THE ANALYSIS WORKSPACE</div><h1>Prepare a sample<span className="accent-period">.</span></h1><p>A thoughtful first step towards a clearer interpretation.</p></div><div className="intro-index"><span>01</span><small>PREPARATION</small></div></section>
     <div className="workspace-layout">
       <section className="preparation-panel" aria-label="Sample preparation">
         <div className="section-heading"><div><span className="section-number">01 /</span><h2>Sample images</h2></div><span className="count-label">{hasImages ? `${String(images.length).padStart(2, '0')} / 12 FIELDS` : 'ONE SAMPLE AT A TIME'}</span></div>
-        <input ref={input} id="sample-files" data-testid="file-input" type="file" accept="image/jpeg,image/png" multiple className="sr-only" tabIndex={-1} onChange={event => { void addFiles(Array.from(event.target.files ?? [])); event.target.value = '' }} />
+        <input ref={input} id="sample-files" data-testid="file-input" type="file" accept="image/jpeg,image/png,image/bmp" multiple className="sr-only" tabIndex={-1} onChange={event => { void addFiles(Array.from(event.target.files ?? [])); event.target.value = '' }} />
         <div ref={surface} className={`upload-surface ${dragging ? 'dragging' : ''} ${hasImages ? 'has-images' : ''}`} onDragEnter={event => { event.preventDefault(); if (!event.dataTransfer.types.includes('Files')) return; dragDepth.current += 1; setDragging(true) }} onDragOver={event => event.preventDefault()} onDragLeave={event => { event.preventDefault(); dragDepth.current -= 1; if (dragDepth.current <= 0) setDragging(false) }} onDrop={onDrop} aria-busy={busy}>
           {!hasImages ? <div className="upload-empty">
             <div className="upload-art" aria-hidden="true"><img src="/assets/cell-etching.webp" alt="" /><div className="art-orbit orbit-one" /><div className="art-orbit orbit-two" /><span className="art-coordinate">HEp-2 / FIELD STUDY</span></div>
-            <div className="upload-copy"><span className="upload-symbol"><ArrowDownToLine size={22} strokeWidth={1.3} /></span><h3>Bring your fields<br /><em>into focus.</em></h3><p>Drop microscopy images here,<br className="desktop-break" /> or choose them from your device.</p><button ref={chooseButton} className="button button-primary" onClick={() => input.current?.click()} disabled={busy}>{busy ? <LoaderCircle size={16} className="spin" /> : <Plus size={17} />}Choose images<ArrowRight size={16} className="button-arrow" /></button><span className="upload-formats">JPEG or PNG <span>·</span> up to 20 MB each</span></div>
+            <div className="upload-copy"><span className="upload-symbol"><ArrowDownToLine size={22} strokeWidth={1.3} /></span><h3>Bring your fields<br /><em>into focus.</em></h3><p>Drop microscopy images here,<br className="desktop-break" /> or choose them from your device.</p><button ref={chooseButton} className="button button-primary" onClick={() => input.current?.click()} disabled={busy}>{busy ? <LoaderCircle size={16} className="spin" /> : <Plus size={17} />}Choose images<ArrowRight size={16} className="button-arrow" /></button><span className="upload-formats">JPEG, PNG or BMP <span>·</span> up to 20 MB each</span></div>
             <div className="upload-bottom"><span className="mini-cross">+</span><span>Several fields. One sample. A complete picture.</span><span className="mini-cross">+</span></div>
           </div> : <div className="selected-images">
             <div className="draft-toolbar"><span><span className="status-dot" />Sample draft</span><ClearDraft /></div>
@@ -96,7 +95,7 @@ export function Workspace() {
           </div>}
           {dragging && <div className="drop-overlay"><ArrowDownToLine size={34} /><span>Release to add your images</span></div>}
         </div>
-        <div className="privacy-line"><LockKeyhole size={14} /><span>Files stay in this browser. Nothing is uploaded.</span><span className="session-label">SESSION ONLY</span></div>
+        <div className="privacy-line"><LockKeyhole size={14} /><span>Images go only to the screening service on this computer. Nothing is stored.</span><span className="session-label">SESSION ONLY</span></div>
         <div className="sr-only" role="status" aria-live="polite">{busy ? 'Checking selected images.' : `${images.length} images selected.`}</div>
         {errors.length > 0 && <div className="file-errors" role="alert"><div><CircleAlert size={17} /><strong>Some files need attention</strong><button className="icon-button" onClick={dismissErrors} aria-label="Dismiss file errors"><X size={15} /></button></div><ul>{errors.map((error, index) => <li key={`${index}-${error}`}>{error}</li>)}</ul></div>}
         <div className="sample-guidance"><div className="eyebrow">A WELL-PREPARED SAMPLE</div><div className="guidance-items"><div><Layers2 size={18} strokeWidth={1.3} /><div><h3>Keep the fields together</h3><p>Choose images belonging to the same patient sample.</p></div></div><div><ScanLine size={18} strokeWidth={1.3} /><div><h3>Preserve the original view</h3><p>Use the original microscopy exports, without added filters.</p></div></div></div></div>
@@ -106,14 +105,13 @@ export function Workspace() {
         <div className="eyebrow">FROM FIELD TO FINDING</div><h2>A clear path<br /><em>through the sample.</em></h2><p className="workflow-lead">Each step brings the images closer to one considered result.</p>
         <ol className="workflow-steps"><li className="current"><span className="step-marker">{hasImages ? <Check size={15} /> : '01'}</span><div><h3>Prepare the images <span>NOW</span></h3><p>Select the fields from one sample.</p></div></li><li><span className="step-marker">02</span><div><h3>Screen each field</h3><p>Each field is screened as positive or negative, then brought together at sample level.</p></div></li><li><span className="step-marker">03</span><div><h3>Review the result</h3><p>Inspect the fields behind the screening result.</p></div></li></ol>
         <div className="sample-summary"><div><span>Selected fields</span><strong>{String(images.length).padStart(2, '0')}</strong></div><div><span>Sample status</span><span className="sample-state">{busy ? 'Checking files' : hasImages ? 'Draft prepared' : 'Awaiting images'}</span></div></div>
-        <button className="button button-analysis" disabled={!hasImages || busy || analysis.state.status === 'running'} onClick={analyse} aria-describedby="analysis-availability"><span>Analyse sample</span><ArrowRight size={17} /></button><p id="analysis-availability" className="availability-note">{hasImages ? <>Results are simulated from image brightness.<br />They are not a model prediction.</> : 'Add at least one image to analyse.'}</p>
-        {hasImages && <label className="demo-toggle"><input type="checkbox" checked={simulateFailure} onChange={event => setSimulateFailure(event.target.checked)} />Simulate a failed analysis (demo)</label>}
-        <AnalysisDialog state={analysis.state} onCancel={analysis.cancel} onRetry={() => { setSimulateFailure(false); void analysis.start() }} />
+        <button className="button button-analysis" disabled={!hasImages || busy || analysis.state.status === 'running'} onClick={analyse} aria-describedby="analysis-availability"><span>Analyse sample</span><ArrowRight size={17} /></button><p id="analysis-availability" className="availability-note">{hasImages ? <>Screened by a ResNet18 research model trained on public AIDA images.<br />Not clinically validated.</> : 'Add at least one image to analyse.'}</p>
+        <AnalysisDialog state={analysis.state} onCancel={analysis.cancel} onRetry={analyse} />
         <div className="principle"><NucleusMark /><p>One sample.<br /><em>A more complete perspective.</em></p></div>
       </aside>
     </div>
     {hasImages && <section className="mobile-analyse" aria-label="Analyse this sample">
-      <span><strong>{String(images.length).padStart(2, '0')}</strong> {images.length === 1 ? 'field' : 'fields'} ready<small>Simulated analysis</small></span>
+      <span><strong>{String(images.length).padStart(2, '0')}</strong> {images.length === 1 ? 'field' : 'fields'} ready<small>Research model</small></span>
       <button className="button button-primary" disabled={busy || analysis.state.status === 'running'} onClick={analyse}>Analyse sample<ArrowRight size={16} /></button>
     </section>}
     <footer className="page-footer"><span><FileImage size={13} /> HEp-2 indirect immunofluorescence</span><span>Decision support, not a diagnosis.<ChevronRight size={12} /></span></footer>

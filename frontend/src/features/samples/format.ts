@@ -2,8 +2,8 @@ import type { ScreeningCall } from '../../types/sample'
 
 export const callLabel = (call: ScreeningCall) => (call === 'positive' ? 'Positive' : 'Negative')
 
-/** 0.942 → "94.2%". */
-export const formatConfidence = (confidence: number) => `${(confidence * 100).toFixed(1)}%`
+/** 0.942 → "94.2%". A model output never reads as 100%: 0.9997 → ">99.9%". */
+export const formatConfidence = (confidence: number) => confidence >= 0.9995 ? '>99.9%' : `${(confidence * 100).toFixed(1)}%`
 
 export const formatField = (field: number) => `Field ${String(field).padStart(2, '0')}`
 

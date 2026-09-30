@@ -3,10 +3,10 @@ import { easing, timings } from '../../motion/presets'
 import { formatConfidence } from '../../features/samples/format'
 
 // The bar grows on mount; MotionConfig in MotionProvider skips the transform when motion is reduced.
-export function ConfidenceBar({ value, label = 'Model confidence' }: { value?: number; label?: string }) {
+export function ConfidenceBar({ value, label = 'Model confidence', missing = 'Not provided for this result.' }: { value?: number; label?: string; missing?: string }) {
   if (value === undefined) return <div className="confidence">
     <span className="confidence-label">{label}</span>
-    <p className="confidence-missing">Not provided for this result.</p>
+    <p className="confidence-missing">{missing}</p>
   </div>
   return <div className="confidence">
     <span className="confidence-label">{label}</span>

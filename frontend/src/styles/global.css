@@ -416,8 +416,6 @@ button.field-photo:hover .field-expand, button.field-photo:focus-visible .field-
 .viewer-hint { margin-left: auto; white-space: nowrap; }
 .button.button-analysis:not(:disabled) { background: #183960; border-color: #183960; color: #fff; }
 .button.button-analysis:not(:disabled):hover { background: #224c7b; border-color: #224c7b; box-shadow: 0 4px 12px #14213d14; }
-.demo-toggle { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; font-size: 12px; color: #647286; cursor: pointer; }
-.demo-toggle input { width: 14px; height: 14px; accent-color: var(--color-accent); }
 .analysis-dialog { width: min(520px, calc(100% - 36px)); }
 .analysis-art { display: block; width: calc(100% + 76px); max-width: none; margin: -38px -38px 18px; height: 180px; object-fit: cover; object-position: 70% 50%; mix-blend-mode: multiply; border-bottom: 1px solid var(--line); }
 .analysis-dialog .dialog-title { margin-top: 16px; }
@@ -429,7 +427,9 @@ button.field-photo:hover .field-expand, button.field-photo:focus-visible .field-
 .analysis-stage.current .analysis-stage-marker { color: var(--color-accent); border-color: #bccbe2; background: #e7edf6; }
 .analysis-stage.done { color: #4f5d70; }
 .analysis-stage.done .analysis-stage-marker { color: #fff; background: #3f639b; border-color: #3f639b; }
-.analysis-failure { display: flex; align-items: center; gap: 10px; margin: -6px 0 24px; padding: 12px 14px; font-size: 13px; color: #6b5020; background: #f6f1e6; border: 1px solid #e6d9bf; border-radius: 4px; }
+.analysis-failure { display: flex; align-items: flex-start; gap: 10px; margin: -6px 0 24px; padding: 12px 14px; font-size: 13px; color: #6b5020; background: #f6f1e6; border: 1px solid #e6d9bf; border-radius: 4px; }
+.analysis-failure svg { flex: none; margin-top: 2px; }
+.analysis-failure ul { margin: 8px 0 0; padding-left: 16px; font-size: 12px; overflow-wrap: anywhere; }
 @media (max-width: 700px) {
   .viewer-header, .viewer-footer { padding: 12px 14px; gap: 12px; }
   .viewer-stage { --pad-top: 12px; --pad-bottom: 72px; --pad-x: 8px; }
