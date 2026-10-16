@@ -11,7 +11,7 @@ import path from 'node:path'
 test.skip(!process.env.CAPTURE, 'Set CAPTURE=1 to regenerate presentation screenshots')
 
 const out = (name: string) => path.resolve('..', 'UI Concepts', `${name}.png`)
-const demoDir = path.resolve('..', 'demo-images', '1-positive-sample-39')
+const demoDir = path.resolve('..', 'demo-images', '1-positive-sample-40')
 const demoFields = () => fs.readdirSync(demoDir).sort().map(file => path.join(demoDir, file))
 
 async function settle(page: Page) {

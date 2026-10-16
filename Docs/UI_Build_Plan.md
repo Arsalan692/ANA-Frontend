@@ -18,6 +18,10 @@ We build one phase at a time. A phase is done only when `npm.cmd run build`, `li
 | 3 | Simulated analysis flow and simple image viewer | Friday | Done (29 Sep 2026) |
 | 4 | Friday demo readiness | Friday | Done (29 Sep 2026) |
 | M1 | Connect the trained ResNet18 pos/neg model | Friday | Done (30 Sep 2026) |
+| M2 | Replace it with the calibrated EfficientNet-B0 model | Friday | Done (1 Oct 2026) |
+| M3 | Several models, chosen in the workspace | Later | Done (9 Oct 2026) |
+| M4 | Cell-level pattern families (Cell patterns page) | Later | Done (9 Oct 2026) |
+| M5 | Project reorganised: one folder and one recipe per model, for both tasks | Later | Done (16 Oct 2026) |
 | 5 | Pattern classification UI | Later | Not started |
 | 6 | Full image viewer | Later | Not started |
 | 7 | Sample history | Later | Not started |
@@ -104,7 +108,7 @@ _As built (superseded by M1, which connects the real model):_ uploaded fields we
 
 **Done when:** the Friday demo runs start to finish without issues.
 
-_As built:_ demo script in `Docs/Friday_Demo_Script.md`; presentation screenshots in `UI Concepts/Screen-{Desktop,Mobile}-*.png` (regenerate with `$env:CAPTURE='1'; npx.cmd playwright test screens`); full-journey tests fail on any console error; phones get a pinned "Analyse sample" bar.
+_As built:_ demo script in `Docs/Demo_Script.md`; presentation screenshots in `UI Concepts/Screen-{Desktop,Mobile}-*.png` (regenerate with `$env:CAPTURE='1'; npx.cmd playwright test screens`); full-journey tests fail on any console error; phones get a pinned "Analyse sample" bar.
 
 ## M1 — Connect the trained model
 
@@ -116,11 +120,59 @@ _As built:_ demo script in `Docs/Friday_Demo_Script.md`; presentation screenshot
 
 _As built:_ `backend/scripts/evaluate_split.py` gives 298/298 pixel-identical preprocessed images and TN 79 · FP 3 · FN 6 · TP 210, matching `Model Training/analysis/aida/test_report`. With the majority rule, 143 of 146 test samples are correct at sample level. The model calls the synthetic demo artwork positive (out of distribution), so the demo uses three held-out test samples copied to `demo-images/`. Browser tests stub the service; `e2e/model.spec.ts` runs the real model.
 
+## M2 — Calibrated EfficientNet-B0 model
+
+- The service now loads `Results/best.pt`: EfficientNet-B0 (timm), one logit, from cross-validation round 1 of `Second Model Training/`. It replaces the ResNet18 checkpoint of M1; the endpoint is unchanged.
+- Preprocessing follows that project's reference implementation exactly: RGB, shorter side to 512 px (Lanczos), centre 512 × 512 crop, ImageNet normalisation, no brightness or contrast change.
+- Confidence is calibrated by temperature scaling (T = 1.754); a probability of 0.5 or more is ANA positive.
+- Model facts shown in the UI come from the service, and UI copy no longer names a model, so the next model swap needs no frontend change.
+
+**Done when:** the service reproduces the reported round-1 test result on fold 1 and the journey runs through the real model.
+
+_As built:_ `backend/scripts/evaluate_split.py` gives 416/416 fold-1 images identical to the training tensors and TN 114 · FP 2 · FN 30 · TP 270 (sensitivity 0.900, specificity 0.983), matching the phase plan. With the majority rule, 189 of 200 fold-1 samples are correct at sample level. Demo samples are now 40, 866 and 137, all from fold 1 (samples 39 and 869 used for M1 were in this model's training folds).
+
+## M3 — Several models, chosen in the workspace
+
+- Each model is a recipe in `backend/app/recipes/`: its weights file, architecture, exact training preprocessing, output rule and plain-language details. Models trained on different data with different preprocessing sit side by side.
+- The service lists the models (`GET /api/models`) and loads each the first time it is chosen; `POST /api/screen` takes the chosen model id.
+- The workspace has a **Screening model** picker above **Analyse sample**. It shows each model's description, disables models whose weights file is missing, and explains when the service is not running. The choice lasts for the session.
+- Every result names the model that produced it, in the review panel and in the "Analysed this session" list.
+- Adding a model needs no frontend change: weights file, recipe module, parity check.
+
+**Done when:** both existing models can be chosen in the UI and each reproduces its own training project's reported test result through the service.
+
+_As built:_ two recipes, `efficientnet-b0-aida-r1` (default) and `resnet18-aida-512`. `backend/scripts/evaluate_split.py` checks every model on its own held-out test set: EfficientNet-B0 416/416 identical inputs and TN 114 · FP 2 · FN 30 · TP 270; ResNet18 298/298 and TN 79 · FP 3 · FN 6 · TP 210. The two were tested on different splits, so these figures are not a head-to-head comparison.
+
+## M4 — Cell-level pattern families
+
+- A new **Cell patterns** page (`/cells`) for a different task: one cropped cell in, one of three pattern families out (Homogeneous, Speckled, Nucleolar). It is separate from sample screening because the input and the answer are different; cells are never combined into a sample result.
+- The service calls the training project's own inference script, copied unchanged, with the uploaded image untouched. Five ResNet18 models (one per cross-validation round) are averaged after temperature calibration.
+- Each cell card shows the family, the confidence, the probability of all three families, a clear warning when the model is uncertain (below 70%), and a question when the image is far larger than one cell.
+- The limits are stated next to the upload: one cell per image, three families only, expected cell size, research use.
+- Thumbnails show the cell as the model sees it (the script's own brightness-stretched canvas), with a toggle to the original, because raw crops are too dark to see.
+
+**Done when:** the copied script reproduces the outputs saved in training, and cells can be classified end to end in the browser.
+
+_As built:_ `backend/scripts/check_cell_patterns.py` gives 998 of 1,000 test-fold answers identical and 2 near-ties, with the script and weights byte-identical to the training project. Demo cells in `demo-images/cells/` are not held out for the five-model average. This covers part of Phase 5 at cell level; a pattern for a whole sample (AC codes, reference card) is still Phase 5.
+
+## M5 — Project reorganised for adding models
+
+- `models/` (was `Results/`) holds one folder per model, named by its id. `backend/app/recipes/` holds one file per model, for both tasks: the cell model is a recipe like the screening models, with its training script copied unchanged into `recipes/vendor/`.
+- Each recipe carries its own parity check; `backend/scripts/check_models.py` runs them all (it replaces `evaluate_split.py` and `check_cell_patterns.py`). `_template_screening.py` and `_template_cells.py` are the starting points for a new model.
+- `GET /api/models` lists the models of both tasks; `POST /api/cells` (was `/api/patterns`) takes a `model` id like `/api/screen`. The Cell patterns page has the same model picker as the workspace.
+- Frontend: one service client (`src/api/service.ts`), one image check shared by both pages (`src/lib/images.ts`), one browser-test mock (`e2e/serviceMock.ts`).
+- Removed: superseded scripts, the old Phase 1 screenshots, a 2.2 MB image that only a test needed but every build shipped, and build/test caches.
+
+**Done when:** all three models pass `check_models.py` from their new folders and every check passes.
+
+_As built:_ the three models reproduce their training projects exactly as before (see `backend/README.md`). Paths in the M1–M4 notes above describe the layout before this reorganisation.
+
 ---
 
 # Later track — after Friday
 
 ## Phase 5 — Pattern classification UI
+_Cell-level families are done in M4. What remains here is the pattern of a whole sample._
 Add the pattern config (AC-1, speckled AC-2/4/5, nucleolar AC-8/9/10), pattern name and AC code in the panel and tile captions, the pattern-reference card, and pattern demo states. Keep a positive result without a pattern valid.
 
 ## Phase 6 — Full image viewer

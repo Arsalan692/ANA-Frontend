@@ -6,7 +6,7 @@ desktop.ini
 .idea/
 *.swp
 
-# Python (frontend/scripts)
+# Python caches
 __pycache__/
 *.pyc
 
@@ -18,10 +18,15 @@ __pycache__/
 # Office lock files
 ~$*
 
-# Backend: virtual environment, model checkpoints, test caches
+# Backend: virtual environment and test caches
 .venv/
-*.pt
 .pytest_cache/
 
-# Local copies of AIDA test images for the demo (not redistributed)
+# Trained models: one folder per model in models/, copied from the training projects. Only the
+# README is in git; weights are large and the datasets' licences forbid redistribution.
+models/*
+!models/README.md
+*.pt
+
+# Demo images copied from the datasets by backend/scripts/copy_demo_images.py (not redistributed)
 demo-images/

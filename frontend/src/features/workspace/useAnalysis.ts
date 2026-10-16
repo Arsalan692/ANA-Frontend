@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useDraft, useSession } from '../../app/contexts'
-import { screenSample, ScreeningError } from '../../api/screening'
-import type { FileProblem } from '../../api/screening'
+import { useDraft, useModels, useSession } from '../../app/contexts'
+import { screenSample } from '../../api/screening'
+import { ServiceError } from '../../api/service'
+import type { FileProblem } from '../../api/service'
 import type { Sample } from '../../types/sample'
 
 export type AnalysisStage = 'preparing' | 'screening' | 'finalising'
@@ -24,6 +25,7 @@ const STAGE_PAUSE = 350
 export function useAnalysis() {
   const { images, takeDraft } = useDraft()
   const { sessionSamples, addSample } = useSession()
+  const { selected, status: modelsStatus, reload: reloadModels } = useModels('screening')
   const navigate = useNavigate()
   const [state, setState] = useState<AnalysisState>({ status: 'idle' })
   const run = useRef(0)
@@ -45,7 +47,7 @@ export function useAnalysis() {
       await wait(STAGE_PAUSE)
       if (!alive()) return
       setState({ status: 'running', stage: 'screening', total })
-      const [response] = await Promise.all([screenSample(snapshot.map(image => image.file), abort.signal), wait(STAGE_PAUSE)])
+      const [response] = await Promise.all([screenSample(snapshot.map(image => image.file), { model: selected?.id, signal: abort.signal }), wait(STAGE_PAUSE)])
       if (!alive()) return
       setState({ status: 'running', stage: 'finalising', total })
       await wait(STAGE_PAUSE)
@@ -62,21 +64,17 @@ export function useAnalysis() {
           result: { call: response.fields[index].call, confidence: response.fields[index].confidence } })),
         // The model scores single images, so there is no sample-level confidence to show.
         result: { call: result.call, needsReview: result.needsReview },
-        analysis: { analysedAt: response.analysedAt, modelLabel: model.label, simulated: false, details: [
-          { label: 'Checkpoint', value: `${model.checkpoint} · epoch ${model.epoch} · ${model.sha256}` },
-          { label: 'Training data', value: model.trainingData },
-          { label: 'Input', value: `Each field padded to ${model.resolution} × ${model.resolution} px, as in training` },
-          { label: 'Sample rule', value: result.rule },
-        ] },
+        analysis: { analysedAt: response.analysedAt, modelLabel: model.label, simulated: false, details: [...model.details, { label: 'Sample rule', value: result.rule }] },
         review: { status: 'pending' },
         demo: false,
       }
       addSample(sample)
+      if (modelsStatus !== 'ready') reloadModels() // The service answered, so the model list can be read now.
       setState({ status: 'idle' })
       navigate(`/samples/${id}`)
     } catch (error) {
       if (!alive()) return
-      setState(error instanceof ScreeningError
+      setState(error instanceof ServiceError
         ? { status: 'failed', message: error.message, files: error.files }
         : { status: 'failed', message: 'The analysis could not be completed.', files: [] })
     } finally {

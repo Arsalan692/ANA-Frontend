@@ -61,7 +61,7 @@ export function InterpretationPanel({ sample }: { sample: Sample }) {
         <div><dt>Analysed</dt><dd>{formatDateTime(analysis.analysedAt)}</dd></div>
         {analysis.details?.map(detail => <div key={detail.label}><dt>{detail.label}</dt><dd>{detail.value}</dd></div>)}</>}
         <div><dt>Fields screened</dt><dd>{sample.images.length}</dd></div>
-        <div><dt>Output</dt><dd>ANA positive or negative. Staining pattern classification comes in a later version.</dd></div>
+        <div><dt>Output</dt><dd>ANA positive or negative. Pattern classification for a whole sample comes in a later version; single cells can be classified under Cell patterns.</dd></div>
       </dl>
     </details>
     <p className="panel-disclaimer">Decision support, not a diagnosis.</p>

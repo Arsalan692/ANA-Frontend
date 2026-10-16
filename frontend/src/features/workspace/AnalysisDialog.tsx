@@ -31,7 +31,7 @@ export function AnalysisDialog({ state, onCancel, onRetry }: { state: AnalysisSt
         <Badge dot>Research model</Badge>
         {state.status === 'running' && <>
           <Dialog.Title className="dialog-title">Screening the sample.</Dialog.Title>
-          <Dialog.Description className="dialog-description">Each field is screened by the ResNet18 model running on this computer. It is a research model, not clinically validated.</Dialog.Description>
+          <Dialog.Description className="dialog-description">Each field is screened by the model running on this computer. It is a research model, not clinically validated.</Dialog.Description>
           <StageList state={state} />
           <p className="sr-only" role="status" aria-live="polite">{state.stage === 'screening' ? `Screening ${state.total} fields` : STAGES.find(stage => stage.key === state.stage)?.label}</p>
           <div className="confirm-actions"><button className="button button-secondary" onClick={onCancel}>Cancel</button></div>

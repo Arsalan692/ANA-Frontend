@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import * as Dialog from '@radix-ui/react-dialog'
 import { motion } from 'motion/react'
-import { BookOpen, ChevronRight, Clock3, Grid2X2, Menu, X } from 'lucide-react'
+import { BookOpen, ChevronRight, Clock3, Grid2X2, Menu, ScanSearch, X } from 'lucide-react'
 import { useMotionPreference } from '../../app/contexts'
 import { NucleusMark } from '../ui/Brand'
 import { HelpDialog } from '../ui/HelpDialog'
@@ -15,12 +15,14 @@ const isActive = (to: string, pathname: string) => to === '/workspace' ? pathnam
 function pageTitle(pathname: string) {
   if (pathname === '/research') return 'Research'
   if (pathname === '/samples') return 'Sample history'
+  if (pathname === '/cells') return 'Cell patterns'
   if (isSampleReview(pathname)) return 'Sample review'
   return 'Workspace'
 }
 
 const links = [
   { to: '/workspace', label: 'Workspace', icon: Grid2X2 },
+  { to: '/cells', label: 'Cell patterns', icon: ScanSearch },
   { to: '/samples', label: 'Sample history', icon: Clock3 },
   { to: '/research', label: 'Research', icon: BookOpen },
 ]

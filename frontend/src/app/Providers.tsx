@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import { MotionConfig } from 'motion/react'
-import { DraftContext, MotionContext, SessionContext } from './contexts'
+import { CellsContext, DraftContext, ModelsContext, MotionContext, SessionContext } from './contexts'
+import type { CellItem, CellsContextValue, ModelsContextValue } from './contexts'
+import { classifyCells } from '../api/cells'
+import { listModels, ServiceError } from '../api/service'
+import type { ModelOption, Task } from '../api/service'
 import type { Sample } from '../types/sample'
 import type { DraftImage } from '../features/workspace/types'
-import { fileKey, validateFile, validateDimensions } from '../features/workspace/filePolicy'
+import { fileKey, inspectImage } from '../lib/images'
 
 const reducedQuery = '(prefers-reduced-motion: reduce)'
 const getSystemReduced = () => window.matchMedia(reducedQuery).matches
@@ -60,24 +64,11 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     try {
       for (const file of files) {
         if (run !== generation.current) return
-        const invalid = validateFile(file, imagesRef.current.map(image => image.key))
-        if (invalid) { issues.push(`${file.name}: ${invalid}`); continue }
-        let url: string | undefined
-        try {
-          const bitmap = await createImageBitmap(file)
-          const { width, height } = bitmap
-          bitmap.close()
-          const dimensionError = validateDimensions(width, height)
-          if (dimensionError) { issues.push(`${file.name}: ${dimensionError}`); continue }
-          if (run !== generation.current) return
-          url = URL.createObjectURL(file)
-          const image = { id: crypto.randomUUID(), key: fileKey(file), file, url, width, height }
-          imagesRef.current = [...imagesRef.current, image]
-          setImages(imagesRef.current)
-        } catch {
-          if (url) URL.revokeObjectURL(url)
-          issues.push(`${file.name}: this image could not be opened. Choose a valid JPEG or PNG.`)
-        }
+        const checked = await inspectImage(file, imagesRef.current.map(image => image.key))
+        if (run !== generation.current) return // Cleared while decoding: drop the result.
+        if (typeof checked === 'string') { issues.push(`${file.name}: ${checked}`); continue }
+        imagesRef.current = [...imagesRef.current, { id: crypto.randomUUID(), key: fileKey(file), file, url: URL.createObjectURL(file), ...checked }]
+        setImages(imagesRef.current)
       }
       if (run === generation.current) setErrors(issues)
     } finally {
@@ -130,4 +121,102 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setReviewedAt(previous => previous[sampleId] ? previous : { ...previous, [sampleId]: new Date().toISOString() })
   }, [])
   return <SessionContext.Provider value={{ sessionSamples, addSample, reviewedAt, completeReview }}>{children}</SessionContext.Provider>
+}
+
+/** Asks the service once which models exist (for both tasks); the choice per task is kept for the session. */
+export function ModelsProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<{ status: ModelsContextValue['status']; models: ModelOption[] }>({ status: 'loading', models: [] })
+  const [chosen, setChosen] = useState<Partial<Record<Task, string>>>({})
+  const [attempt, setAttempt] = useState(0)
+  useEffect(() => {
+    const controller = new AbortController()
+    listModels(controller.signal)
+      .then(models => setState({ status: 'ready', models }))
+      .catch(() => { if (!controller.signal.aborted) setState({ status: 'unavailable', models: [] }) })
+    return () => controller.abort()
+  }, [attempt])
+  const reload = useCallback(() => setAttempt(previous => previous + 1), [])
+  // If the service was not running, look again when the user comes back to the page after starting it.
+  useEffect(() => {
+    if (state.status !== 'unavailable') return
+    window.addEventListener('focus', reload)
+    return () => window.removeEventListener('focus', reload)
+  }, [state.status, reload])
+  const choose = useCallback((task: Task, id: string) => setChosen(previous => ({ ...previous, [task]: id })), [])
+  return <ModelsContext.Provider value={{ ...state, chosen, choose, reload }}>{children}</ModelsContext.Provider>
+}
+
+export function CellsProvider({ children }: { children: ReactNode }) {
+  const [cells, setCells] = useState<CellItem[]>([])
+  const [errors, setErrors] = useState<string[]>([])
+  const [busy, setBusy] = useState(false)
+  const [classifying, setClassifying] = useState(false)
+  const [failure, setFailure] = useState<CellsContextValue['failure']>()
+  const cellsRef = useRef<CellItem[]>([])
+  const adding = useRef(false)
+  const run = useRef(0)
+  const controller = useRef<AbortController | null>(null)
+  const commit = (next: CellItem[]) => { cellsRef.current = next; setCells(next) }
+  useEffect(() => () => {
+    run.current += 1
+    controller.current?.abort()
+    cellsRef.current.forEach(cell => URL.revokeObjectURL(cell.url))
+  }, [])
+
+  const addFiles = useCallback(async (files: File[]) => {
+    if (!files.length || adding.current) return
+    adding.current = true
+    setBusy(true)
+    const issues: string[] = []
+    try {
+      for (const file of files) {
+        const checked = await inspectImage(file, cellsRef.current.map(cell => cell.key), 'cells')
+        if (typeof checked === 'string') { issues.push(`${file.name}: ${checked}`); continue }
+        commit([...cellsRef.current, { id: crypto.randomUUID(), key: fileKey(file), file, url: URL.createObjectURL(file), ...checked }])
+      }
+      setErrors(issues)
+    } finally {
+      adding.current = false
+      setBusy(false)
+    }
+  }, [])
+
+  const removeCell = (id: string) => {
+    const removed = cellsRef.current.find(cell => cell.id === id)
+    if (removed) URL.revokeObjectURL(removed.url)
+    commit(cellsRef.current.filter(cell => cell.id !== id))
+  }
+  const clearCells = () => {
+    run.current += 1
+    controller.current?.abort()
+    cellsRef.current.forEach(cell => URL.revokeObjectURL(cell.url))
+    commit([])
+    setErrors([])
+    setFailure(undefined)
+    setClassifying(false)
+  }
+  const classify = async (model?: ModelOption) => {
+    const pending = cellsRef.current.filter(cell => !cell.result)
+    if (!pending.length || classifying) return
+    const token = ++run.current
+    const abort = new AbortController()
+    controller.current = abort
+    setClassifying(true)
+    setFailure(undefined)
+    try {
+      const response = await classifyCells(pending.map(cell => cell.file), { model: model?.id, signal: abort.signal })
+      if (token !== run.current) return
+      // Results come back in upload order; a cell removed meanwhile is simply no longer in the list.
+      const results = new Map(pending.map((cell, index) => [cell.id, response.cells[index]]))
+      commit(cellsRef.current.map(cell => results.has(cell.id) ? { ...cell, result: results.get(cell.id), model: { label: response.model.label, minConfidence: model?.minConfidence } } : cell))
+    } catch (error) {
+      if (token !== run.current) return
+      setFailure(error instanceof ServiceError ? { message: error.message, files: error.files } : { message: 'The cells could not be classified.', files: [] })
+    } finally {
+      if (token === run.current) setClassifying(false)
+    }
+  }
+  return <CellsContext.Provider value={{ cells, errors, busy, classifying, failure, addFiles, removeCell, clearCells, classify, dismissErrors: () => setErrors([]) }}>
+    {children}
+  </CellsContext.Provider>
 }

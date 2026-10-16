@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import path from 'node:path'
 
-const artwork = path.resolve('public/assets/cell-etching.png')
+const artwork = path.resolve('assets-source/cell-etching.png')
 async function openWorkspace(page: Page) {
   await page.goto('/workspace')
   await expect(page.getByRole('heading', { name: 'Prepare a sample.' })).toBeVisible()

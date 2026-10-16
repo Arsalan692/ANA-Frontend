@@ -6,7 +6,7 @@ All images here are **generated artwork**. None of them is real microscopy, an A
 
 | File | Use |
 | --- | --- |
-| `cell-etching.webp` | Sidebar, upload empty state, placeholder pages. Transparent background (the ivory paper is converted to alpha by the script), so it sits on any surface with no box. `cell-etching.png` is the opaque original, kept here as an upload fixture for the e2e tests |
+| `cell-etching.webp` | Sidebar, upload empty state, placeholder pages. Transparent background (the ivory paper is converted to alpha by the script), so it sits on any surface with no box. The opaque original is `assets-source/cell-etching.png` (also the e2e upload fixture) |
 | `screen-positive.webp` / `screen-negative.webp` | Result panel art for ANA positive / negative |
 | `analysis-field.webp` | Analysis-in-progress screen |
 | `empty-slide.webp` | Empty and not-found states |

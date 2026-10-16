@@ -3,8 +3,8 @@ import type { DragEvent } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { ArrowDownToLine, ArrowRight, ArrowUpRight, Check, ChevronRight, CircleAlert, FileImage, ImagePlus, Layers2, LoaderCircle, LockKeyhole, Plus, ScanLine, Trash2, X } from 'lucide-react'
 import * as Dialog from '@radix-ui/react-dialog'
-import { useDraft, useMotionPreference } from '../../app/contexts'
-import { formatBytes } from './filePolicy'
+import { useDraft, useModels, useMotionPreference } from '../../app/contexts'
+import { formatBytes } from '../../lib/images'
 import { Link } from 'react-router-dom'
 import { NucleusMark } from '../../components/ui/Brand'
 import { Badge } from '../../components/ui/Badge'
@@ -14,11 +14,12 @@ import { useSamples } from '../samples/useSamples'
 import type { Sample } from '../../types/sample'
 import { AnalysisDialog } from './AnalysisDialog'
 import { useAnalysis } from './useAnalysis'
+import { ModelPicker } from '../../components/ui/ModelPicker'
 
 function SampleLinks({ samples }: { samples: Sample[] }) {
   return <ul>{samples.map(sample => <li key={sample.id}><Link to={`/samples/${sample.id}`} className="demo-sample-link">
     <strong>{sample.reference}</strong>
-    <span className="demo-sample-scenario">{sample.demoScenario ?? `${sample.images.length} ${sample.images.length === 1 ? 'field' : 'fields'} · model result`}</span>
+    <span className="demo-sample-scenario">{sample.demoScenario ?? `${sample.images.length} ${sample.images.length === 1 ? 'field' : 'fields'} · ${sample.analysis?.modelLabel ?? 'model result'}`}</span>
     {sample.result && <ResultStatus call={sample.result.call} />}
     <ArrowUpRight size={15} aria-hidden="true" />
   </Link></li>)}</ul>
@@ -59,6 +60,7 @@ export function Workspace() {
   const [dragging, setDragging] = useState(false)
   const hasImages = images.length > 0
   const analysis = useAnalysis()
+  const { selected: model } = useModels('screening')
   const analyse = () => void analysis.start()
   useEffect(() => {
     const node = surface.current
@@ -105,13 +107,14 @@ export function Workspace() {
         <div className="eyebrow">FROM FIELD TO FINDING</div><h2>A clear path<br /><em>through the sample.</em></h2><p className="workflow-lead">Each step brings the images closer to one considered result.</p>
         <ol className="workflow-steps"><li className="current"><span className="step-marker">{hasImages ? <Check size={15} /> : '01'}</span><div><h3>Prepare the images <span>NOW</span></h3><p>Select the fields from one sample.</p></div></li><li><span className="step-marker">02</span><div><h3>Screen each field</h3><p>Each field is screened as positive or negative, then brought together at sample level.</p></div></li><li><span className="step-marker">03</span><div><h3>Review the result</h3><p>Inspect the fields behind the screening result.</p></div></li></ol>
         <div className="sample-summary"><div><span>Selected fields</span><strong>{String(images.length).padStart(2, '0')}</strong></div><div><span>Sample status</span><span className="sample-state">{busy ? 'Checking files' : hasImages ? 'Draft prepared' : 'Awaiting images'}</span></div></div>
-        <button className="button button-analysis" disabled={!hasImages || busy || analysis.state.status === 'running'} onClick={analyse} aria-describedby="analysis-availability"><span>Analyse sample</span><ArrowRight size={17} /></button><p id="analysis-availability" className="availability-note">{hasImages ? <>Screened by a ResNet18 research model trained on public AIDA images.<br />Not clinically validated.</> : 'Add at least one image to analyse.'}</p>
+        <ModelPicker task="screening" disabled={analysis.state.status === 'running'} />
+        <button className="button button-analysis" disabled={!hasImages || busy || analysis.state.status === 'running'} onClick={analyse} aria-describedby="analysis-availability"><span>Analyse sample</span><ArrowRight size={17} /></button><p id="analysis-availability" className="availability-note">{hasImages ? <>Screened by the research model chosen above.<br />For research and demonstration, not for diagnosis.</> : 'Add at least one image to analyse.'}</p>
         <AnalysisDialog state={analysis.state} onCancel={analysis.cancel} onRetry={analyse} />
         <div className="principle"><NucleusMark /><p>One sample.<br /><em>A more complete perspective.</em></p></div>
       </aside>
     </div>
     {hasImages && <section className="mobile-analyse" aria-label="Analyse this sample">
-      <span><strong>{String(images.length).padStart(2, '0')}</strong> {images.length === 1 ? 'field' : 'fields'} ready<small>Research model</small></span>
+      <span><strong>{String(images.length).padStart(2, '0')}</strong> {images.length === 1 ? 'field' : 'fields'} ready<small>{model?.label ?? 'Research model'}</small></span>
       <button className="button button-primary" disabled={busy || analysis.state.status === 'running'} onClick={analyse}>Analyse sample<ArrowRight size={16} /></button>
     </section>}
     <footer className="page-footer"><span><FileImage size={13} /> HEp-2 indirect immunofluorescence</span><span>Decision support, not a diagnosis.<ChevronRight size={12} /></span></footer>
