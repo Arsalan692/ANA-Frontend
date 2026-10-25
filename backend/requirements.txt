@@ -5,9 +5,11 @@ timm==1.0.30
 torchvision==0.29.0
 numpy==2.5.2
 pillow==12.3.0
+scipy==1.18.1  # used by the vendored predict_homogeneous.py (finding the cell in photos)
 fastapi==0.142.2
 uvicorn[standard]==0.54.0
 python-multipart==0.0.32
-# Tests
+# Parity checks (scripts/check_models.py) and tests
+pandas==3.0.6
 pytest==9.1.1
 httpx==0.28.1

@@ -8,6 +8,9 @@ the pattern model: it averages five cross-validation models and every cell in th
 cell for three of them. Say so when demonstrating. One of the four is a cell the model marks uncertain
 and gets wrong.
 
+Cell photos: the two green FITC cell photos in the Homogeneous project's outputs/phase9/examples/ (not from
+a dataset). The Homogeneous models convert such photos experimentally; the website labels them so.
+
 The folder is git-ignored: neither dataset may be redistributed.
 Run from backend/:  .venv\Scripts\python.exe scripts\copy_demo_images.py
 """
@@ -31,6 +34,8 @@ CELLS = config.PROJECT.parent / 'datasets' / 'cells' / 'cells'
 DEMO_CELLS = {'4622': 'homogeneous-4622.png', '18745': 'speckled-18745.png', '33535': 'nucleolar-33535.png',
               '37499': 'uncertain-true-nucleolar-37499.png'}
 
+PHOTOS = config.PROJECT.parent / 'Code Part' / 'Model Training one vs rest' / 'outputs' / 'phase9' / 'examples'
+
 
 def main():
     with (TRAINING / 'data' / 'aida_file_map.csv').open(newline='', encoding='utf-8') as file:
@@ -51,6 +56,11 @@ def main():
     for index, name in DEMO_CELLS.items():
         shutil.copy2(CELLS / f'{index}.png', cells / name)
         print(f'cells/{name}')
+    photos = TARGET / 'cell-photos'
+    photos.mkdir(parents=True, exist_ok=True)
+    for photo in sorted(PHOTOS.glob('*.png')):
+        shutil.copy2(photo, photos / photo.name)
+        print(f'cell-photos/{photo.name}')
 
 
 if __name__ == '__main__':

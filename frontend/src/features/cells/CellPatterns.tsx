@@ -4,6 +4,7 @@ import { ArrowDownToLine, ArrowRight, ChevronDown, CircleAlert, Eye, LoaderCircl
 import { useCells, useModels } from '../../app/contexts'
 import type { CellItem } from '../../app/contexts'
 import type { ModelOption } from '../../api/service'
+import type { CellQuestion } from '../../api/cells'
 import { Badge } from '../../components/ui/Badge'
 import { ModelPicker } from '../../components/ui/ModelPicker'
 import { PageHeader } from '../../components/layout/PageHeader'
@@ -32,9 +33,36 @@ function Probabilities({ cell }: { cell: Required<CellItem> }) {
   </dl>
 }
 
+/** A yes/no answer at the model's cut-off, with its probability; the markers show the cut-offs on the same scale. */
+function Question({ question }: { question: CellQuestion }) {
+  const { label, yes, no, probability, cutoff, answer, strictCutoff, strictAnswer } = question
+  return <div className="cell-question">
+    <div className="eyebrow">{label.toUpperCase()}?</div>
+    <h3 className="cell-family">{answer ? yes : no}</h3>
+    <p className="cell-confidence"><strong>{formatConfidence(probability)}</strong> probability of {yes}</p>
+    <span className="cell-question-track" role="meter" aria-label={`${yes} probability`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(probability * 1000) / 10} aria-valuetext={formatConfidence(probability)}>
+      <span className="fill" style={{ transform: `scaleX(${probability})` }} />
+      <span className="mark" style={{ left: `${cutoff * 100}%` }} aria-hidden="true" />
+      {strictCutoff !== null && <span className="mark strict" style={{ left: `${strictCutoff * 100}%` }} aria-hidden="true" />}
+    </span>
+    <p className="cell-cutoffs">{answer ? yes : no} from the cut-off of {formatConfidence(cutoff)}{strictCutoff !== null && <>; at the strict cut-off of {formatConfidence(strictCutoff)}: <strong>{strictAnswer ? yes : no}</strong></>}.</p>
+  </div>
+}
+
+/** The model's notes on this cell (e.g. an experimental conversion) and small facts, folded away so the answer stays readable. */
+function CellDetails({ warnings, facts }: { warnings: { title: string; text: string }[]; facts: { label: string; value: string }[] }) {
+  if (!warnings.length && !facts.length) return null
+  return <details className="cell-details">
+    <summary><span>Details</span>{warnings.length > 0 && <small>{warnings.length} {warnings.length === 1 ? 'note' : 'notes'}</small>}<ChevronDown size={14} aria-hidden="true" /></summary>
+    {warnings.map(warning => <p key={warning.title} className="cell-note"><strong>{warning.title}.</strong> {warning.text}</p>)}
+    {facts.length > 0 && <dl className="cell-facts">{facts.map(fact => <div key={fact.label}><dt>{fact.label}</dt><dd>{fact.value}</dd></div>)}</dl>}
+  </details>
+}
+
+const sentence = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
+
 function CellCard({ cell, index, onRemove }: { cell: CellItem; index: number; onRemove: () => void }) {
   const { result } = cell
-  const cutOff = cell.model?.minConfidence !== undefined ? formatConfidence(cell.model.minConfidence).replace('.0%', '%') : undefined
   // Raw cell crops are often too dark to see. Once classified, the card shows the model's own input
   // (the training code's brightness-stretched canvas, made by the service), never a display filter.
   const [original, setOriginal] = useState(false)
@@ -49,12 +77,16 @@ function CellCard({ cell, index, onRemove }: { cell: CellItem; index: number; on
     </figure>
     <div className="cell-result">
       {result ? <>
-        <div className="eyebrow">PATTERN FAMILY</div>
-        <h3 className="cell-family">{result.family}</h3>
-        <p className="cell-confidence"><strong>{formatConfidence(result.confidence)}</strong> model confidence</p>
-        <Probabilities cell={cell as Required<CellItem>} />
-        {result.uncertain && <div className="review-flag" role="note"><CircleAlert size={16} aria-hidden="true" /><p><strong>Uncertain.</strong> The model's confidence is below {cutOff ?? 'its cut-off'}, so this answer should not be relied on. Have the cell checked by a person.</p></div>}
+        {result.question && <Question question={result.question} />}
+        {result.family !== null && result.confidence !== null && <div className={result.question ? 'cell-named' : undefined}>
+          <div className="eyebrow">{result.question ? 'MOST LIKELY PATTERN' : 'PATTERN FAMILY'}</div>
+          <h3 className="cell-family">{result.family}</h3>
+          <p className="cell-confidence"><strong>{formatConfidence(result.confidence)}</strong> model confidence</p>
+          <Probabilities cell={cell as Required<CellItem>} />
+        </div>}
+        {result.uncertain && <div className="review-flag" role="note"><CircleAlert size={16} aria-hidden="true" /><p><strong>Uncertain.</strong> {sentence(cell.model?.uncertainRule ?? 'the model is unsure')}, so this answer should not be relied on. Have the cell checked by a person.</p></div>}
         {result.oversized && <div className="review-flag" role="note"><CircleAlert size={16} aria-hidden="true" /><p><strong>Is this one cell?</strong> At {result.width} × {result.height} px this image is much larger than a single cropped cell. If it shows a whole field or several cells, the answer means nothing.</p></div>}
+        <CellDetails warnings={result.warnings ?? []} facts={result.facts ?? []} />
         {cell.model && <p className="cell-model">{cell.model.label}</p>}
       </> : <p className="cell-pending">Not classified yet.</p>}
     </div>
@@ -92,7 +124,7 @@ export function CellPatterns() {
   }
   return <>
     <PageHeader crumbs={[{ label: 'Cell patterns' }]} badge={<Badge dot>Research model</Badge>} />
-    <section className="page-intro"><div><div className="eyebrow"><span className="tiny-rule" />CELL-LEVEL CLASSIFICATION</div><h1>Name the pattern<span className="accent-period">.</span></h1><p>One cropped cell at a time, placed in one of three pattern families.</p></div><div className="intro-index"><span>02</span><small>PATTERNS</small></div></section>
+    <section className="page-intro"><div><div className="eyebrow"><span className="tiny-rule" />CELL-LEVEL CLASSIFICATION</div><h1>Name the pattern<span className="accent-period">.</span></h1><p>One cropped cell at a time, answered by the model you choose.</p></div><div className="intro-index"><span>02</span><small>PATTERNS</small></div></section>
     <div className="workspace-layout">
       <section className="preparation-panel" aria-label="Cell images">
         <div className="section-heading"><div><span className="section-number">01 /</span><h2>Cell images</h2></div><span className="count-label">{cells.length ? `${String(cells.length).padStart(2, '0')} / ${CELL_LIMIT} CELLS` : 'ONE CELL PER IMAGE'}</span></div>
@@ -110,7 +142,7 @@ export function CellPatterns() {
         {cells.length > 0 ? <>
           <div className="cell-toolbar"><span>{classified ? `${classified} of ${cells.length} classified${uncertain ? ` · ${uncertain} uncertain` : ''}` : `${cells.length} ${cells.length === 1 ? 'cell' : 'cells'} waiting`}</span><button className="text-button" onClick={clearCells}><Trash2 size={14} />Clear all</button></div>
           <ul className="cell-list" aria-label="Cells">{cells.map((cell, index) => <CellCard key={cell.id} cell={cell} index={index} onRemove={() => removeCell(cell.id)} />)}</ul>
-        </> : <p className="cell-empty">No cells yet. Results appear here, one card per cell, each with the family, the model's confidence and the probability of all three families.</p>}
+        </> : <p className="cell-empty">No cells yet. Results appear here, one card per cell, each with the chosen model's answer and its probabilities.</p>}
       </section>
       <aside className="cells-aside" aria-label="About the pattern model">
         <div className="eyebrow">BEFORE YOU TRUST A RESULT</div>

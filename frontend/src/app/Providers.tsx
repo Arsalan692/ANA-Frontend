@@ -208,7 +208,7 @@ export function CellsProvider({ children }: { children: ReactNode }) {
       if (token !== run.current) return
       // Results come back in upload order; a cell removed meanwhile is simply no longer in the list.
       const results = new Map(pending.map((cell, index) => [cell.id, response.cells[index]]))
-      commit(cellsRef.current.map(cell => results.has(cell.id) ? { ...cell, result: results.get(cell.id), model: { label: response.model.label, minConfidence: model?.minConfidence } } : cell))
+      commit(cellsRef.current.map(cell => results.has(cell.id) ? { ...cell, result: results.get(cell.id), model: { label: response.model.label, uncertainRule: model?.uncertainRule } } : cell))
     } catch (error) {
       if (token !== run.current) return
       setFailure(error instanceof ServiceError ? { message: error.message, files: error.files } : { message: 'The cells could not be classified.', files: [] })

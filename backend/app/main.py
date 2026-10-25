@@ -84,7 +84,6 @@ def cells(request: Request, images: list[UploadFile] = File(...), model: str | N
         'model': loaded.info,
         'analysedAt': datetime.now(timezone.utc).isoformat(),
         'cells': [{'name': upload.filename, 'width': image.width, 'height': image.height, 'oversized': max(image.size) > oversized,
-                   'family': result.family, 'confidence': result.confidence, 'uncertain': result.uncertain,
-                   'probabilities': result.probabilities, 'modelView': result.model_view, **result.extra}
+                   **result.json()}
                   for upload, image, result in zip(images, decoded, loaded.classify(decoded))],
     }

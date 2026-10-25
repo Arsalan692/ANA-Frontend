@@ -3,7 +3,7 @@
 The website for the FYP *Automated Classification of ANA Immunofluorescence Patterns Using Deep Learning* (FAST-NUCES Karachi). It runs the project's trained models on HEp-2 microscopy images:
 
 - **Workspace:** a sample's fields → ANA positive or negative, per field and for the sample.
-- **Cell patterns:** single cropped cells → a pattern family (Homogeneous, Speckled, Nucleolar).
+- **Cell patterns:** single cropped cells → a pattern family (Homogeneous, Speckled, Nucleolar), or whether the cell is Homogeneous (AC-1), depending on the model chosen.
 
 Several models can sit side by side for each task; the user picks one. Results are for research and demonstration, not for diagnosis.
 

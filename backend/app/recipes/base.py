@@ -100,19 +100,44 @@ class ScreeningRecipe(Recipe):
 
 
 @dataclass(frozen=True)
+class Question:
+    """A yes/no question a cell model answers, e.g. "Homogeneous (AC-1)?", with its calibrated probability and
+    the training project's cut-offs. Shown above the named pattern."""
+    label: str                # What is asked, e.g. 'Homogeneous (AC-1)'.
+    yes: str                  # The answer's wording either way, e.g. 'Homogeneous' / 'Not homogeneous'.
+    no: str
+    probability: float        # Calibrated probability of "yes".
+    cutoff: float             # "Yes" from this probability (chosen on validation data).
+    strict_cutoff: float | None = None  # A stricter cut-off with fewer false alarms, if the model has one.
+
+    def json(self) -> dict:
+        strict = None if self.strict_cutoff is None else self.probability >= self.strict_cutoff
+        return {'label': self.label, 'yes': self.yes, 'no': self.no, 'probability': self.probability,
+                'cutoff': self.cutoff, 'answer': self.probability >= self.cutoff, 'strictCutoff': self.strict_cutoff, 'strictAnswer': strict}
+
+
+@dataclass(frozen=True)
 class CellPrediction:
-    family: str
-    confidence: float  # Probability of `family`, 0..1. Not clinical certainty.
+    family: str | None        # The named pattern, or None for a model that only answers `question`.
+    confidence: float | None  # Probability of `family`, 0..1. Not clinical certainty.
     uncertain: bool
-    probabilities: dict[str, float]  # One entry per class, in `classes` order.
+    probabilities: dict[str, float]  # One entry per class, in `classes` order (empty without a family).
     model_view: str | None = None  # Optional PNG data URL of the image as the model is given it (display only).
+    question: Question | None = None
+    warnings: list[dict[str, str]] = field(default_factory=list)  # [{'title': ..., 'text': ...}], shown on the card.
+    facts: list[Detail] = field(default_factory=list)  # Small per-cell facts, e.g. how the image was prepared.
     extra: dict = field(default_factory=dict)  # Anything else worth returning, e.g. {'modelsUsed': 5}.
+
+    def json(self) -> dict:
+        return {'family': self.family, 'confidence': self.confidence, 'uncertain': self.uncertain, 'probabilities': self.probabilities,
+                'modelView': self.model_view, 'question': self.question.json() if self.question else None,
+                'warnings': self.warnings, 'facts': self.facts, **self.extra}
 
 
 class CellRecipe(Recipe):
     task = 'cells'
-    classes: tuple[str, ...]  # Pattern families the model can name, in output order.
-    min_confidence: float     # Below this an answer is marked uncertain.
+    classes: tuple[str, ...]  # Pattern families the model can name, in output order (empty if it only answers a question).
+    min_confidence: float | None  # Below this an answer is marked uncertain (None if the model uses another rule).
     limits: tuple[str, ...]   # What the user must know before trusting a result; shown next to the upload.
     # Cells far larger than the training cells are probably not one cropped cell; the website warns.
     oversized_side: int = 200
@@ -121,5 +146,9 @@ class CellRecipe(Recipe):
     def classify(self, model: Any, image: Image.Image) -> CellPrediction:
         """One decoded cell image, exactly as uploaded, to a pattern family."""
 
+    def uncertain_rule(self) -> str:
+        """When an answer is marked uncertain, completing "Uncertain: ..." on a result card."""
+        return f"the model's confidence is below {self.min_confidence:.0%}"
+
     def describe(self) -> dict:
-        return {'classes': list(self.classes), 'minConfidence': self.min_confidence, 'limits': list(self.limits)}
+        return {'classes': list(self.classes), 'minConfidence': self.min_confidence, 'uncertainRule': self.uncertain_rule(), 'limits': list(self.limits)}

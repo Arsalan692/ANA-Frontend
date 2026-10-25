@@ -504,6 +504,26 @@ button.field-photo:hover .field-expand, button.field-photo:focus-visible .field-
 .cell-card .review-flag { margin-top: 12px; padding: 10px 12px; font-size: 12px; }
 .cell-pending { font-size: 13px; color: var(--muted); padding-top: 4px; }
 .cell-model { margin-top: 10px; font-size: 11px; color: #7a8592; }
+.cell-question-track { position: relative; display: block; height: 6px; margin: 12px 0 0; background: #e3e8ee; border-radius: 3px; }
+.cell-question-track .fill { position: absolute; inset: 0; background: var(--color-accent); border-radius: 3px; transform-origin: left; }
+.cell-question-track .mark { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--color-ink); }
+.cell-question-track .mark.strict { background: #7a8592; }
+.cell-cutoffs { margin-top: 9px; font-size: 11px; line-height: 1.5; color: #647286; }
+.cell-cutoffs strong { font-weight: 500; color: var(--color-ink); }
+.cell-named { margin-top: 16px; padding-top: 14px; border-top: 1px solid #e3e8ee; }
+.cell-named .cell-family { font-size: 21px; }
+.cell-details { margin-top: 12px; border-top: 1px solid #e3e8ee; }
+.cell-details summary { display: flex; align-items: center; gap: 8px; padding: 9px 0 0; font-size: 11px; color: #4f5d70; cursor: pointer; list-style: none; }
+.cell-details summary::-webkit-details-marker { display: none; }
+.cell-details summary small { font-size: 10px; color: #8a6d2f; background: #f4ecdc; padding: 1px 6px; border-radius: 8px; }
+.cell-details summary svg { margin-left: auto; transition: transform .2s; }
+.cell-details[open] summary svg { transform: rotate(180deg); }
+.cell-note { margin-top: 9px; font-size: 11px; line-height: 1.5; color: #4f5d70; }
+.cell-note strong { font-weight: 500; color: var(--color-ink); }
+.cell-facts { margin: 10px 0 0; display: grid; gap: 4px; font-size: 11px; line-height: 1.45; color: #647286; }
+.cell-facts > div { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 8px; }
+.cell-facts dt { color: #7a8592; }
+.cell-facts dd { margin: 0; }
 .cells-aside .model-picker { margin-top: 20px; border-top: none; padding-top: 0; }
 .cell-remove { position: absolute; top: 8px; right: 8px; }
 .cells-aside { border-left: 1px solid var(--line); padding-left: 29px; min-width: 0; }

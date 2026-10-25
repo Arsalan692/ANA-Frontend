@@ -22,6 +22,7 @@ We build one phase at a time. A phase is done only when `npm.cmd run build`, `li
 | M3 | Several models, chosen in the workspace | Later | Done (9 Oct 2026) |
 | M4 | Cell-level pattern families (Cell patterns page) | Later | Done (9 Oct 2026) |
 | M5 | Project reorganised: one folder and one recipe per model, for both tasks | Later | Done (16 Oct 2026) |
+| M6 | Two Homogeneous (AC-1) cell models: 6-class (main) and one-vs-rest (comparison) | Later | Done (16 Oct 2026) |
 | 5 | Pattern classification UI | Later | Not started |
 | 6 | Full image viewer | Later | Not started |
 | 7 | Sample history | Later | Not started |
@@ -166,6 +167,17 @@ _As built:_ `backend/scripts/check_cell_patterns.py` gives 998 of 1,000 test-fol
 **Done when:** all three models pass `check_models.py` from their new folders and every check passes.
 
 _As built:_ the three models reproduce their training projects exactly as before (see `backend/README.md`). Paths in the M1–M4 notes above describe the layout before this reorganisation.
+
+## M6 — Homogeneous (AC-1) cell models
+
+- Two cell models from `Code Part/Model Training one vs rest/`, each five ResNet18 round models with their own temperatures, averaged: `homogeneous-6class-resnet18` (main; names the most likely of six patterns) and `homogeneous-ovr-resnet18` (comparison; one-vs-rest, answers only the question). Neither is the default cell model.
+- The training project's `scripts/predict_homogeneous.py` is vendored unchanged; both recipes use its `prepare`, `to_canvas` and `network_input` (the 6-class one also its `load_models` and `predict_canvases`). Greyscale crops up to 100 px are used as is; other images (e.g. green FITC photos) are converted by the script and labelled **experimental**.
+- The 6-class card shows only the named pattern and the six probabilities, with **no uncertainty flag** (the 0.2–0.8 band was calibrated for the Homogeneous probability, not the named pattern; a rule derived from validation data may come later). The one-vs-rest card answers Homogeneous or not at the cut-off (≈ 0.22) and the strict cut-off (≈ 0.38), uncertain when 0.2 < p < 0.8.
+- Notes (experimental photo; round spread above 0.4, of the answer shown) and facts are folded into a **Details** toggle on each card (user decision, 17 Oct 2026). The website shows a model's yes/no `question`, `warnings` and `facts` generically; a model's uncertainty rule comes from the service (`uncertainRule`).
+
+**Done when:** both models pass `check_models.py`; the API reproduces `examples_predictions.csv` and the training script's own output.
+
+_As built:_ model files and the vendored script byte-identical to the training project; per round, 40 test cells match the saved scores (typical difference ≤ 0.00016, largest 0.021, as the script's own self-test); the phase 9 examples match `examples_predictions.csv` 2/2, and the training script run on the examples plus 20 test cells matches the recipe 22/22. The script's `--self-test` still passes in the training project.
 
 ---
 

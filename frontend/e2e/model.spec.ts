@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
 
-// Runs the real models (weights in Results/) through the UI. Needs the screening service and the demo images:
+// Runs the real models (weights in ../models/) through the UI. Needs the screening service and the demo images:
 //   npm.cmd run api                                                   (in another terminal)
 //   ..\backend\.venv\Scripts\python.exe ..\backend\scripts\copy_demo_images.py
 //   $env:MODEL_E2E='1'; npx.cmd playwright test model
@@ -97,4 +97,27 @@ test('the real pattern model classifies single cells and flags the one it is uns
   await expect(page.getByRole('complementary', { name: 'About the pattern model' })).toContainText('ResNet18, one per cross-validation round')
   await page.screenshot({ path: 'test-results/model-cells.png', fullPage: true })
   expect(problems).toEqual([])
+})
+
+test('the real 6-class model gives the training script numbers for the green example photos', async ({ page }) => {
+  await page.goto('/cells')
+  const about = page.getByRole('complementary', { name: 'About the pattern model' })
+  await about.getByLabel('Pattern model').selectOption({ label: 'ResNet18 ensemble · 6 patterns' })
+  await page.getByTestId('cell-input').setInputFiles(folder('cell-photos'))
+  const cards = page.getByRole('list', { name: 'Cells' }).getByRole('listitem')
+  await about.getByRole('button', { name: 'Classify cells' }).click()
+  await expect(page.getByText('2 of 2 classified', { exact: true })).toBeVisible({ timeout: 60_000 })
+  // outputs/phase9/examples_predictions.csv: Homogeneous 0.5611 (named Homogeneous); 0.3448, named Speckled 0.5806.
+  const homogeneous = cards.filter({ hasText: 'green_homogeneous' })
+  await expect(homogeneous.getByRole('heading', { name: 'Homogeneous' })).toBeVisible()
+  await expect(homogeneous).toContainText('56.1% model confidence')
+  const speckled = cards.filter({ hasText: 'green_speckled' })
+  await expect(speckled.getByRole('heading', { name: 'Speckled' })).toBeVisible()
+  await expect(speckled).toContainText('58.1% model confidence')
+  await expect(speckled.getByRole('meter', { name: 'Homogeneous probability' })).toHaveAttribute('aria-valuetext', '34.5%')
+  for (const card of [homogeneous, speckled]) {
+    await card.getByText('Details').click()
+    await expect(card).toContainText('Experimental.')
+  }
+  await page.screenshot({ path: 'test-results/model-homogeneous.png', fullPage: true })
 })

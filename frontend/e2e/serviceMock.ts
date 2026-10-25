@@ -8,8 +8,11 @@ import type { Page } from '@playwright/test'
 // otherwise positive), combined with the service's majority rule.
 // Cells: the family follows the file name (…speckled…, …nucleolar…, otherwise Homogeneous); "uncertain"
 // gives 60% and the uncertain flag; "field" marks the image as far larger than one cell.
+// Homogeneous question models (homogeneous-*): "homogeneous" in the name gives 86%, "uncertain" 45%, otherwise
+// 8%; "green" marks the image as a converted photo (experimental). The 6-class one names a pattern instead.
 
 const FAMILIES = ['Homogeneous', 'Speckled', 'Nucleolar']
+const SIX = [...FAMILIES, 'Centromere', 'Nuclear membrane', 'Golgi']
 const detail = (value: string) => [{ label: 'Training', value }]
 
 export const MODELS = [
@@ -17,9 +20,15 @@ export const MODELS = [
   { id: 'resnet18-aida-512', task: 'screening', label: 'ResNet18 · AIDA · 512 px', summary: 'Earlier baseline. Looks at the whole field (padded, not cropped).', available: true, default: false, details: detail('AIDA, fixed split') },
   { id: 'cells-resnet18-adjusted', task: 'cells', label: 'ResNet18 ensemble · 3 pattern families', summary: 'Five models averaged, calibrated.', available: true, default: true,
     details: [{ label: 'Models', value: 'ResNet18, one per cross-validation round; their probabilities are averaged' }],
-    classes: FAMILIES, minConfidence: 0.7,
+    classes: FAMILIES, minConfidence: 0.7, uncertainRule: "the model's confidence is below 70%",
     limits: ['Upload one cropped cell per image, not a whole microscope field.', 'The model knows only Homogeneous, Speckled and Nucleolar. Any other pattern, or a negative cell, still gets one of these names.',
       'Cells should be roughly 60 to 100 pixels across.', 'For research and demonstration only, not for diagnosis.'] },
+  { id: 'homogeneous-6class-resnet18', task: 'cells', label: 'ResNet18 ensemble · 6 patterns', summary: 'Names the most likely of six patterns.', available: true, default: false,
+    details: detail('Qi et al., six patterns'), classes: SIX, minConfidence: null, uncertainRule: 'never: there is no validated uncertainty rule for the named pattern yet',
+    limits: ['Upload one cell per image.', 'Other images, such as green FITC photos, are converted automatically. That is experimental.', 'For research and demonstration only, not for diagnosis.'] },
+  { id: 'homogeneous-ovr-resnet18', task: 'cells', label: 'ResNet18 ensemble · Homogeneous vs rest', summary: 'Comparison model: only says whether the cell is Homogeneous.', available: true, default: false,
+    details: detail('Qi et al., Homogeneous vs rest'), classes: [], minConfidence: null, uncertainRule: 'the Homogeneous probability is between 20% and 80%',
+    limits: ['Upload one cell per image.', 'It only says whether a cell is Homogeneous; it does not name other patterns.', 'For research and demonstration only, not for diagnosis.'] },
 ]
 type MockModel = typeof MODELS[number]
 
@@ -57,17 +66,31 @@ export async function mockService(page: Page, { delay = 0, models = MODELS }: { 
   })
   await page.route('**/api/cells', async route => {
     const { names, model } = readForm(route.request().postDataBuffer()?.toString('latin1') ?? '', 'cells', models)
-    const cells = names.map(name => {
-      const family = FAMILIES.find(candidate => name.includes(candidate.toLowerCase())) ?? 'Homogeneous'
-      const confidence = name.includes('uncertain') ? 0.6 : 0.955
-      const others = FAMILIES.filter(candidate => candidate !== family)
-      const probabilities = Object.fromEntries(FAMILIES.map(candidate => [candidate, candidate === family ? confidence : candidate === others[0] ? (1 - confidence) * 0.75 : (1 - confidence) * 0.25]))
-      const big = name.includes('field')
-      return { name, width: big ? 2448 : 73, height: big ? 2048 : 65, oversized: big, family, confidence, uncertain: confidence < 0.7, probabilities, modelsUsed: 5, modelView: `data:image/png;base64,${TINY_PNG}` }
-    })
+    const cells = names.map(name => model.id.startsWith('homogeneous') ? homogeneousCell(name, model.id.includes('6class')) : patternCell(name))
     await wait()
     await route.fulfill({ json: { model, analysedAt: new Date().toISOString(), cells } }).catch(() => { /* Cancelled by the page. */ })
   })
+}
+
+function patternCell(name: string) {
+  const family = FAMILIES.find(candidate => name.includes(candidate.toLowerCase())) ?? 'Homogeneous'
+  const confidence = name.includes('uncertain') ? 0.6 : 0.955
+  const others = FAMILIES.filter(candidate => candidate !== family)
+  const probabilities = Object.fromEntries(FAMILIES.map(candidate => [candidate, candidate === family ? confidence : candidate === others[0] ? (1 - confidence) * 0.75 : (1 - confidence) * 0.25]))
+  const big = name.includes('field')
+  return { name, width: big ? 2448 : 73, height: big ? 2048 : 65, oversized: big, family, confidence, uncertain: confidence < 0.7, probabilities, modelsUsed: 5, modelView: `data:image/png;base64,${TINY_PNG}` }
+}
+
+function homogeneousCell(name: string, named: boolean) {
+  const p = name.includes('homogeneous') ? 0.86 : name.includes('uncertain') ? 0.45 : 0.08
+  const photo = name.includes('green')
+  const probabilities = named ? Object.fromEntries(SIX.map(pattern => [pattern, pattern === 'Homogeneous' ? p : pattern === 'Speckled' ? (1 - p) * 0.8 : (1 - p) * 0.05])) : {}
+  const family = named ? (p >= 0.5 ? 'Homogeneous' : 'Speckled') : null
+  return { name, width: photo ? 144 : 73, height: photo ? 122 : 65, oversized: false, family, confidence: family ? probabilities[family] : null,
+    uncertain: !named && p > 0.2 && p < 0.8, probabilities, modelsUsed: 5, modelView: `data:image/png;base64,${TINY_PNG}`, roundSpread: photo ? 0.61 : 0.05, preparation: photo ? 'photo' : 'qi',
+    question: named ? null : { label: 'Homogeneous (AC-1)', yes: 'Homogeneous', no: 'Not homogeneous', probability: p, cutoff: 0.218, answer: p >= 0.218, strictCutoff: 0.382, strictAnswer: p >= 0.382 },
+    warnings: photo ? [{ title: 'Experimental', text: 'This is not a greyscale single-cell crop like the training cells, so it was converted automatically.' }, { title: 'The five models disagree', text: 'Their Homogeneous probabilities differ by up to 61%.' }] : [],
+    facts: [{ label: 'Prepared as', value: photo ? 'photo: green channel, cell found, longest side 75 px' : 'greyscale cell crop, used as is' }] }
 }
 
 /** The service is not running: every request to it fails to connect. */

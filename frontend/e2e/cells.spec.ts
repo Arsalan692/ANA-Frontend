@@ -110,3 +110,44 @@ test('the cells page fits every width, and a phone gets a pinned classify bar', 
     await page.screenshot({ path: `test-results/cells-${width}.png`, fullPage: true })
   }
 })
+
+test('the 6-class model names a pattern only; the comparison model answers Homogeneous; notes stay behind Details', async ({ page }) => {
+  await open(page)
+  const about = page.getByRole('complementary', { name: 'About the pattern model' })
+  await about.getByLabel('Pattern model').selectOption({ label: 'ResNet18 ensemble · 6 patterns' })
+  await page.getByTestId('cell-input').setInputFiles([cellFile('homogeneous-1.png'), cellFile('green-uncertain-2.png')])
+  await about.getByRole('button', { name: 'Classify cells' }).click()
+  await expect(page.getByText('2 of 2 classified', { exact: true })).toBeVisible()  // The 6-class model flags nothing.
+
+  const clear = cards(page).nth(0)
+  await expect(clear).toContainText('PATTERN FAMILY')
+  await expect(clear.getByRole('heading', { name: 'Homogeneous' })).toBeVisible()
+  await expect(clear).toContainText('86.0% model confidence')
+  for (const pattern of ['Centromere', 'Nuclear membrane', 'Golgi']) await expect(clear.getByRole('meter', { name: `${pattern} probability` })).toBeVisible()
+  await expect(clear).not.toContainText('HOMOGENEOUS (AC-1)?')
+  await expect(clear).not.toContainText('cut-off')
+
+  // A converted photo: its notes are folded away until Details is opened.
+  const photo = cards(page).nth(1)
+  await expect(photo.getByRole('heading', { name: 'Speckled' })).toBeVisible()
+  await expect(photo.getByText('Uncertain.')).toHaveCount(0)
+  await expect(photo.getByText('Experimental.')).toBeHidden()
+  await expect(photo.locator('summary')).toContainText('Details2 notes')
+  await photo.getByText('Details').click()
+  await expect(photo.getByText('Experimental.')).toBeVisible()
+  await expect(photo).toContainText('The five models disagree.')
+  await expect(photo).toContainText('photo: green channel, cell found, longest side 75 px')
+
+  // The comparison model only answers the question, and keeps its uncertain band visible.
+  await about.getByLabel('Pattern model').selectOption({ label: 'ResNet18 ensemble · Homogeneous vs rest' })
+  await page.getByTestId('cell-input').setInputFiles([cellFile('speckled-3.png'), cellFile('uncertain-4.png')])
+  await about.getByRole('button', { name: 'Classify cells' }).click()
+  await expect(page.getByText('4 of 4 classified · 1 uncertain')).toBeVisible()
+  const other = cards(page).nth(2)
+  await expect(other.getByRole('heading', { name: 'Not homogeneous' })).toBeVisible()
+  await expect(other).toContainText('8.0% probability of Homogeneous')
+  await expect(other).toContainText('Not homogeneous from the cut-off of 21.8%; at the strict cut-off of 38.2%: Not homogeneous.')
+  await expect(other).not.toContainText('PATTERN FAMILY')
+  await expect(cards(page).nth(3)).toContainText('Uncertain. The Homogeneous probability is between 20% and 80%')
+  await expect(other).toContainText('ResNet18 ensemble · Homogeneous vs rest')
+})

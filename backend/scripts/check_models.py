@@ -55,7 +55,9 @@ def main():
             answer = f'{field.call} (P positive {field.probability_positive:.3f})'
         else:
             cell = loaded.classify([image])[0]
-            answer = f'{cell.family} {cell.confidence:.1%}' + (' uncertain' if cell.uncertain else '')
+            answer = ' · '.join(filter(None, [
+                cell.family and f'{cell.family} {cell.confidence:.1%}',
+                cell.question and f'{cell.question.label} {cell.question.probability:.1%}'])) + (' uncertain' if cell.uncertain else '')
         print(f'  Loaded {loaded.info["checkpoint"]} · {loaded.info["sha256"]} in {time.perf_counter() - started:.1f} s; synthetic image -> {answer}')
         if args.quick:
             results.append(True)

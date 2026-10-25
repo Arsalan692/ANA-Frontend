@@ -73,8 +73,8 @@ export function useModels(task: Task) {
 export type CellItem = {
   id: string; key: string; file: File; url: string; width: number; height: number
   result?: CellResult
-  /** The model that classified this cell and its uncertainty cut-off (cells may be classified by different models). */
-  model?: { label: string; minConfidence?: number }
+  /** The model that classified this cell and when it calls an answer uncertain (cells may be classified by different models). */
+  model?: { label: string; uncertainRule?: string }
 }
 
 /** Session-only state of the Cell patterns page, kept above the router so it survives navigation. */

@@ -14,9 +14,11 @@ export type ModelOption = {
   available: boolean
   default: boolean
   details: Detail[]
-  /** Cell models only: the families they can name, the uncertainty cut-off and the limits to show the user. */
+  /** Cell models only: the families they can name (none if the model only answers a yes/no question),
+   *  the uncertainty cut-off, when an answer is uncertain (completes "Uncertain: …") and the limits to show. */
   classes?: string[]
-  minConfidence?: number
+  minConfidence?: number | null
+  uncertainRule?: string
   limits?: string[]
 }
 
