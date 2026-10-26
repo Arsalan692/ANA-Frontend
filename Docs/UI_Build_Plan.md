@@ -23,6 +23,7 @@ We build one phase at a time. A phase is done only when `npm.cmd run build`, `li
 | M4 | Cell-level pattern families (Cell patterns page) | Later | Done (9 Oct 2026) |
 | M5 | Project reorganised: one folder and one recipe per model, for both tasks | Later | Done (16 Oct 2026) |
 | M6 | Two Homogeneous (AC-1) cell models: 6-class (main) and one-vs-rest (comparison) | Later | Done (16 Oct 2026) |
+| M7 | Swin-Tiny cell model (four patterns); green images read from their green channel | Later | Done (26 Oct 2026) |
 | 5 | Pattern classification UI | Later | Not started |
 | 6 | Full image viewer | Later | Not started |
 | 7 | Sample history | Later | Not started |
@@ -178,6 +179,17 @@ _As built:_ the three models reproduce their training projects exactly as before
 **Done when:** both models pass `check_models.py`; the API reproduces `examples_predictions.csv` and the training script's own output.
 
 _As built:_ model files and the vendored script byte-identical to the training project; per round, 40 test cells match the saved scores (typical difference ≤ 0.00016, largest 0.021, as the script's own self-test); the phase 9 examples match `examples_predictions.csv` 2/2, and the training script run on the examples plus 20 test cells matches the recipe 22/22. The script's `--self-test` still passes in the training project.
+
+## M7 — Swin-Tiny cell model
+
+- One Swin-Tiny vision transformer (`swin-tiny`), trained in the Colab notebook `HEp2_Notebook_ViT.ipynb` on the Qi et al. cells, classes 1–4 (Homogeneous, Speckled, Nucleolar, Centromere). The notebook also trains ResNet-50 and ViT-B/16; only Swin-Tiny is integrated. Not the default cell model.
+- There is no inference script, so the recipe copies the notebook's test transform (`val_tf`: resize to 224 × 224, ImageNet normalisation) and ImageFolder's RGB loader, with the model's class order (folders sorted).
+- **Green images:** the model was trained on greyscale cells only. Every colour image is given to it as its green channel. A green false-colour copy of a grey cell (red and blue zero) comes back exactly as the grey cell; any other colour image is labelled experimental. `copy_demo_images.py` makes green false-colour copies of held-out test cells for demonstrations.
+- No uncertainty flag (probabilities not calibrated), as for the 6-class model.
+
+**Done when:** `check_models.py` reproduces the notebook's test report on its own test split.
+
+_As built:_ the notebook's split rebuilt exactly (8,403 test cells, same per-pattern counts); accuracy 0.9601 and κ 0.9468 (notebook 0.960 and 0.9468); every per-pattern precision and recall identical to 3 decimals; green copies give exactly the grey probabilities. The notebook's split is random, not by slide, so its test figures are likely optimistic.
 
 ---
 

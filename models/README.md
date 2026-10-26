@@ -8,6 +8,7 @@ One folder per model, named by the model's id. The service (`backend/`) reads ea
 | `resnet18-aida-512/` | screening | `aida_binary_resnet18_512_best.pt` | `Model Training/` (Colab results) |
 | `homogeneous-6class-resnet18/` | cells | `round_0` … `round_4` (each `best.pt`, `metrics.json`), `calibration.json` | `Code Part/Model Training one vs rest/outputs/runs/6class_strong_aug/`; `calibration.json` from `outputs/phase7/` |
 | `homogeneous-ovr-resnet18/` | cells | the same layout | `…/outputs/runs/ovr_strong_aug/`; the same `calibration.json` |
+| `swin-tiny/` | cells | `best_swin_tiny_patch4_window7_224.pth` | the Colab notebook `HEp2_Notebook_ViT.ipynb` (its Google Drive `HEp2_Results/`) |
 | `cells-resnet18-adjusted/` | cells | `round_0` … `round_4` (each `best.pt`, `metrics.json`), `calibration/temperatures.json` | `Code Part/Model Training on Basic Classes/outputs/resnet18_adjusted/` |
 
 Keep the training project's file names and layout. Each recipe lists the files it needs in `files`; a model whose files are missing is shown in the website as unavailable.
